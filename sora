@@ -1,0 +1,265 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import sys
+import base64
+import requests
+
+class GitHubManager:
+    def __init__(self, token):
+        self.token = token
+        self.base_url = "https://api.github.com"
+        self.headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        self.user = self.get_current_user()
+
+    def get_current_user(self):
+        """Fetches the authenticated user's username."""
+        url = f"{self.base_url}/user"
+        response = requests.get(url, headers=self.headers)
+        if response.status_code == 200:
+            return response.json()['login']
+        else:
+            print(f"Error: Invalid token or connection issue. {response.status_code}")
+            sys.exit(1)
+
+    def create_repo(self, name, private=False, description=""):
+        """Creates a new repository."""
+        url = f"{self.base_url}/user/repos"
+        data = {
+            "name": name,
+            "private": private,
+            "description": description,
+            "auto_init": True 
+        }
+        response = requests.post(url, json=data, headers=self.headers)
+        if response.status_code == 201:
+            print(f"✅ Repository '{name}' created successfully! (Private: {private})")
+            print(f"   URL: {response.json()['html_url']}")
+        else:
+            print(f"❌ Failed to create repo: {response.json().get('message')}")
+
+    def view_repo(self, name):
+        """Displays details about a repository."""
+        url = f"{self.base_url}/repos/{self.user}/{name}"
+        response = requests.get(url, headers=self.headers)
+        if response.status_code == 200:
+            repo = response.json()
+            print(f"\n📦 Repository: {repo['name']}")
+            print(f"   Description: {repo['description']}")
+            print(f"   Private: {repo['private']}")
+            print(f"   Stars: {repo['stargazers_count']}")
+            print(f"   URL: {repo['html_url']}")
+            print(f"   Clone: {repo['clone_url']}\n")
+        else:
+            print(f"❌ Repository not found or access denied.")
+
+    def delete_repo(self, name):
+        """Deletes a repository."""
+        confirmation = input(f"⚠️  Are you sure you want to DELETE '{self.user}/{name}'? This cannot be undone! (type 'yes'): ")
+        if confirmation.lower() != 'yes':
+            print("Operation cancelled.")
+            return
+
+        url = f"{self.base_url}/repos/{self.user}/{name}"
+        response = requests.delete(url, headers=self.headers)
+        if response.status_code == 204:
+            print(f"🗑️  Repository '{name}' deleted successfully.")
+        else:
+            print(f"❌ Failed to delete repo: {response.json().get('message')}")
+
+    def set_visibility(self, name, private):
+        """Sets the repository visibility to public or private."""
+        url = f"{self.base_url}/repos/{self.user}/{name}"
+        data = {"private": private}
+        response = requests.patch(url, json=data, headers=self.headers)
+        if response.status_code == 200:
+            state = "Private" if private else "Public"
+            print(f"🔒 Repository '{name}' is now {state}.")
+        else:
+            print(f"❌ Failed to update visibility: {response.json().get('message')}")
+
+    def get_file_sha(self, repo, path):
+        """Helper to get the SHA of a file (needed for updates/deletes)."""
+        url = f"{self.base_url}/repos/{self.user}/{repo}/contents/{path}"
+        response = requests.get(url, headers=self.headers)
+        if response.status_code == 200:
+            return response.json()['sha']
+        return None
+
+    def upload_file(self, repo_name, local_path, target_path=None):
+        """Uploads a single file to the repository."""
+        if not os.path.isfile(local_path):
+            print(f"❌ Error: Local file '{local_path}' not found.")
+            return
+
+        filename = os.path.basename(local_path)
+        remote_path = target_path if target_path else filename
+        
+        if remote_path.endswith('/'):
+            remote_path = remote_path + filename
+
+        # Skip uploading the script itself to prevent recursion if in same dir
+        if filename == "github_cli.py":
+            return
+
+        try:
+            with open(local_path, "rb") as f:
+                content = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            print(f"❌ Error reading file: {e}")
+            return
+
+        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
+        
+        sha = self.get_file_sha(repo_name, remote_path)
+        message = f"Update {filename}" if sha else f"Create {filename}"
+        
+        data = {
+            "message": message,
+            "content": content
+        }
+        if sha:
+            data["sha"] = sha
+
+        response = requests.put(url, json=data, headers=self.headers)
+        if response.status_code in [200, 201]:
+            action = "Updated" if sha else "Uploaded"
+            print(f"✅ {action} '{local_path}' -> '{remote_path}'")
+        else:
+            print(f"❌ Failed to upload '{local_path}': {response.json().get('message')}")
+
+    def upload_folder(self, repo_name, local_folder, target_folder=""):
+        """Recursively uploads a folder and its contents."""
+        if not os.path.isdir(local_folder):
+            print(f"❌ Error: Local directory '{local_folder}' not found.")
+            return
+
+        # Folders to ignore (simulating .gitignore)
+        IGNORE_DIRS = {'.git', '__pycache__', 'venv', 'env', '.idea', '.vscode', 'node_modules'}
+        IGNORE_FILES = {'.DS_Store'}
+
+        print(f"📂 Starting upload of folder '{local_folder}'...")
+        
+        for root, dirs, files in os.walk(local_folder):
+            # Modify dirs in-place to skip ignored directories
+            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+            
+            for file in files:
+                if file in IGNORE_FILES:
+                    continue
+
+                local_file_path = os.path.join(root, file)
+                
+                # Calculate relative path to maintain structure
+                if local_folder == ".":
+                     # If uploading current dir, relative path is just the file path from root
+                    relative_path = os.path.relpath(local_file_path, local_folder)
+                else:
+                    relative_path = os.path.relpath(local_file_path, local_folder)
+                
+                remote_path = os.path.join(target_folder, relative_path).replace("\\", "/")
+                
+                if remote_path.startswith('/'):
+                    remote_path = remote_path[1:]
+
+                self.upload_file(repo_name, local_file_path, remote_path)
+        print("🏁 Upload complete.")
+
+    def delete_file(self, repo_name, remote_path):
+        """Deletes a file from the repository."""
+        sha = self.get_file_sha(repo_name, remote_path)
+        if not sha:
+            print(f"❌ File '{remote_path}' not found in repo '{repo_name}'.")
+            return
+
+        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
+        data = {
+            "message": f"Delete {remote_path}",
+            "sha": sha
+        }
+        
+        response = requests.delete(url, json=data, headers=self.headers)
+        if response.status_code == 200:
+            print(f"🗑️  File '{remote_path}' deleted successfully.")
+        else:
+            print(f"❌ Failed to delete file: {response.json().get('message')}")
+
+def main():
+    parser = argparse.ArgumentParser(description="GitHub CLI Manager")
+    parser.add_argument("--token", help="GitHub Personal Access Token")
+    
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # Command: create
+    create_parser = subparsers.add_parser("create", help="Create a new repository")
+    create_parser.add_argument("name", help="Name of the repository")
+    create_parser.add_argument("--private", action="store_true", help="Make repository private")
+    create_parser.add_argument("--desc", default="", help="Description of the repository")
+
+    # Command: view
+    view_parser = subparsers.add_parser("view", help="View repository details")
+    view_parser.add_argument("name", help="Name of the repository")
+
+    # Command: delete
+    delete_parser = subparsers.add_parser("delete", help="Delete a repository")
+    delete_parser.add_argument("name", help="Name of the repository")
+
+    # Command: visibility
+    vis_parser = subparsers.add_parser("visibility", help="Change repo visibility")
+    vis_parser.add_argument("name", help="Name of the repository")
+    vis_parser.add_argument("--public", action="store_true", help="Make public")
+    vis_parser.add_argument("--private", action="store_true", help="Make private")
+
+    # Command: upload
+    upload_parser = subparsers.add_parser("upload", help="Upload a specific file or folder")
+    upload_parser.add_argument("repo", help="Target repository name")
+    upload_parser.add_argument("path", help="Local file or folder path")
+    upload_parser.add_argument("--target", default="", help="Target path inside repo (optional)")
+
+    # Command: add-all (Mimics git add . && git push)
+    add_all_parser = subparsers.add_parser("add-all", help="Upload ALL files in current directory (like git add .)")
+    add_all_parser.add_argument("repo", help="Target repository name")
+
+    # Command: rm-file
+    rm_file_parser = subparsers.add_parser("rm-file", help="Delete a file from the repo")
+    rm_file_parser.add_argument("repo", help="Repository name")
+    rm_file_parser.add_argument("path", help="Path of the file inside the repo to delete")
+
+    args = parser.parse_args()
+
+    token = args.token or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("❌ Error: GitHub Token is required. Use --token or set GITHUB_TOKEN env var.")
+        sys.exit(1)
+
+    gh = GitHubManager(token)
+
+    if args.command == "create":
+        gh.create_repo(args.name, args.private, args.desc)
+    elif args.command == "view":
+        gh.view_repo(args.name)
+    elif args.command == "delete":
+        gh.delete_repo(args.name)
+    elif args.command == "visibility":
+        if args.public and args.private:
+            print("❌ Error: Cannot set both --public and --private.")
+        elif args.public:
+            gh.set_visibility(args.name, False)
+        elif args.private:
+            gh.set_visibility(args.name, True)
+    elif args.command == "upload":
+        if os.path.isfile(args.path):
+            gh.upload_file(args.repo, args.path, args.target)
+        elif os.path.isdir(args.path):
+            gh.upload_folder(args.repo, args.path, args.target)
+    elif args.command == "add-all":
+        # Pass "." as the local folder to scan the current directory
+        gh.upload_folder(args.repo, ".")
+    elif args.command == "rm-file":
+        gh.delete_file(args.repo, args.path)
+
+if __name__ == "__main__":
+    main()
