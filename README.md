@@ -156,38 +156,48 @@ To seamlessly run `sora {command}` directly in PowerShell (without needing to ty
         sora visibility my-repo --public
         ```
 
-*   **`upload <repo> [path] [--target TARGET_PATH]`**
+*   **`upload <repo> [path] [--target TARGET_PATH] [-m MESSAGE]`**
     *   **Use:** Uploads a file, a folder, or the entire current directory to a specified repository. If `path` is omitted, it defaults to uploading the current directory (`.`).
     *   **Arguments:**
         *   `<repo>`: The name of the target repository.
         *   `[path]` (optional): Local file or folder path. Use '.' to upload the current directory.
         *   `--target` (optional): The target path inside the repository where the file/folder will be uploaded. If not provided, the file/folder will be uploaded to the root of the repository.
+        *   `-m, --message` (optional): A custom commit message for the upload. If not provided, a default message like "Update <filename>" or "Create <filename>" will be used.
     *   **Examples:**
         ```bash
-        # Upload all files in the current directory
-        sora upload my-repo
-        # or explicitly
-        sora upload my-repo .
+        # Upload all files in the current directory with a custom message
+        sora upload my-repo -m "Initial commit of project files"
 
-        # Upload a single file to the repository root
-        sora upload my-repo my_local_file.txt
+        # Upload a single file to the repository root with a custom message
+        sora upload my-repo my_local_file.txt -m "Add important configuration file"
 
-        # Upload a single file to a specific path within the repo
-        sora upload my-repo my_local_file.txt --target docs/my_remote_file.txt
+        # Upload a single file to a specific path within the repo with a custom message
+        sora upload my-repo my_local_file.txt --target docs/my_remote_file.txt -m "Update documentation"
 
-        # Upload a local folder to the repository root
-        sora upload my-repo my_local_folder
+        # Upload a local folder to the repository root with a custom message
+        sora upload my-repo my_local_folder -m "Upload new feature folder"
 
-        # Upload a local folder to a specific path within the repo
-        sora upload my-repo my_local_folder --target project-files
+        # Upload a local folder to a specific path within the repo with a custom message
+        sora upload my-repo my_local_folder --target project-files -m "Sync project files"
         ```
 
-*   **`rm-file <repo> <path>`**
-    *   **Use:** Deletes a specific file from a repository.
+*   **`rm <repo> <path> [-m MESSAGE]`**
+    *   **Use:** Deletes a file or recursively deletes a folder from the specified repository.
     *   **Arguments:**
-        *   `<repo>`: Repository name.
-        *   `<path>`: Path of the file inside the repo to delete.
-    *   **Example:**
+        *   `<repo>`: The name of the target repository.
+        *   `<path>`: The path of the file or folder inside the repository to delete.
+        *   `-m, --message` (optional): A custom commit message for the deletion. If not provided, a default message like "Delete <path>" will be used.
+    *   **Examples:**
         ```bash
-        sora rm-file my-repo docs/old_file.txt
+        # Delete a single file
+        sora rm my-repo docs/old_file.txt
+
+        # Delete a single file with a custom message
+        sora rm my-repo docs/old_file.txt -m "Removing outdated documentation"
+
+        # Delete a folder (and its contents) recursively
+        sora rm my-repo old-folder
+
+        # Delete a folder with a custom message
+        sora rm my-repo old-folder -m "Cleaning up old feature files"
         ```
