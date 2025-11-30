@@ -88,6 +88,74 @@ To seamlessly run `sora {command}` directly in PowerShell (without needing to ty
 
 ## Commands
 
+### Global Arguments (can be used with or without a subcommand)
+
+*   **`--version`**
+    *   **Use:** Displays the version of the GitHub CLI Manager.
+    *   **Example:**
+        ```bash
+        sora --version
+        ```
+
+*   **`--check-account`**
+    *   **Use:** Shows the GitHub username of the currently connected account.
+    *   **Example:**
+        ```bash
+        sora --check-account
+        ```
+
+*   **`--show-local-repo`**
+    *   **Use:** Detects and displays the GitHub repository name that the current local Git repository is connected to.
+    *   **Important:** This command must be run within a directory that is a Git repository (i.e., contains a `.git` folder) and has a remote origin configured. If not, it will display an error.
+    *   **Example:**
+        ```bash
+        # Navigate to your local Git repository first
+        cd C:\path\to\your\repo
+        sora --show-local-repo
+        ```
+
+### Subcommands
+
+*   **`create <name> [--private] [--desc DESCRIPTION]`**
+    *   **Use:** Creates a new GitHub repository.
+    *   **Arguments:**
+        *   `<name>`: The name of the new repository.
+        *   `--private` (optional): Makes the repository private.
+        *   `--desc` (optional): Provides a description for the repository.
+    *   **Example:**
+        ```bash
+        sora create my-new-repo --private --desc "My awesome private project"
+        ```
+
+*   **`view <name>`**
+    *   **Use:** Displays details about a specific GitHub repository.
+    *   **Arguments:**
+        *   `<name>`: The name of the repository to view.
+    *   **Example:**
+        ```bash
+        sora view my-new-repo
+        ```
+
+*   **`delete <name>`**
+    *   **Use:** Deletes a GitHub repository. **This action is irreversible.**
+    *   **Arguments:**
+        *   `<name>`: The name of the repository to delete.
+    *   **Example:**
+        ```bash
+        sora delete my-old-repo
+        ```
+
+*   **`visibility <name> [--public | --private]`**
+    *   **Use:** Changes the visibility of a repository (public or private).
+    *   **Arguments:**
+        *   `<name>`: The name of the repository.
+        *   `--public`: Makes the repository public.
+        *   `--private`: Makes the repository private.
+    *   **Example:**
+        ```bash
+        sora visibility my-repo --public
+        ```
+
 *   **`upload <repo> [path] [--target TARGET_PATH]`**
     *   **Use:** Uploads a file, a folder, or the entire current directory to a specified repository. If `path` is omitted, it defaults to uploading the current directory (`.`).
     *   **Arguments:**
@@ -116,6 +184,9 @@ To seamlessly run `sora {command}` directly in PowerShell (without needing to ty
 
 *   **`rm-file <repo> <path>`**
     *   **Use:** Deletes a specific file from a repository.
+    *   **Arguments:**
+        *   `<repo>`: Repository name.
+        *   `<path>`: Path of the file inside the repo to delete.
     *   **Example:**
         ```bash
         sora rm-file my-repo docs/old_file.txt
