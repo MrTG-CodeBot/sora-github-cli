@@ -91,7 +91,7 @@ class GitHubManager:
             return response.json()['sha']
         return None
 
-    def upload_file(self, repo_name, local_path, target_path=None):
+    def upload_file(self, repo_name, local_path, target_path=None, commit_message=None):
         """Uploads a single file to the repository."""
         if not os.path.isfile(local_path):
             print(f"❌ Error: Local file '{local_path}' not found.")
@@ -118,6 +118,8 @@ class GitHubManager:
         
         sha = self.get_file_sha(repo_name, remote_path)
         message = f"Update {filename}" if sha else f"Create {filename}"
+        if commit_message: # Use custom message if provided
+            message = commit_message
         
         data = {
             "message": message,
@@ -133,7 +135,7 @@ class GitHubManager:
         else:
             print(f"❌ Failed to upload '{local_path}': {response.json().get('message')}")
 
-    def upload_folder(self, repo_name, local_folder, target_folder=""):
+    def upload_folder(self, repo_name, local_folder, target_folder="", commit_message=None):
         """Recursively uploads a folder and its contents."""
         if not os.path.isdir(local_folder):
             print(f"❌ Error: Local directory '{local_folder}' not found.")
@@ -167,27 +169,60 @@ class GitHubManager:
                 if remote_path.startswith('/'):
                     remote_path = remote_path[1:]
 
-                self.upload_file(repo_name, local_file_path, remote_path)
+                self.upload_file(repo_name, local_file_path, remote_path, commit_message)
         print("🏁 Upload complete.")
 
-    def delete_file(self, repo_name, remote_path):
+    def get_repo_contents(self, repo_name, path=""):
+        """Helper to get contents of a directory in the repository."""
+        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{path}"
+        response = requests.get(url, headers=self.headers)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
+    def delete_path(self, repo_name, remote_path):
+        """Deletes a file or recursively deletes a folder from the repository."""
+        print(f"Attempting to delete: {remote_path} from {repo_name}")
+        contents = self.get_repo_contents(repo_name, remote_path)
+
+        if contents is None: # Path not found
+            print(f"❌ Path '{remote_path}' not found in repo '{repo_name}'.")
+            return False
+
+        if isinstance(contents, list): # It's a directory
+            print(f"📂 Deleting folder '{remote_path}' recursively...")
+            for item in contents:
+                item_path = item['path']
+                if not self.delete_path(repo_name, item_path): # Recursively delete
+                    print(f"❌ Failed to delete '{item_path}'. Aborting folder deletion.")
+                    return False
+            # After deleting all contents, the directory itself is effectively gone on GitHub.
+            # We don't explicitly delete directories via SHA, only files.
+            print(f"✅ Folder '{remote_path}' and its contents deleted successfully.")
+            return True
+        else: # It's a file
+            return self.delete_file(repo_name, remote_path)
+
+    def delete_file(self, repo_name, remote_path, commit_message=None):
         """Deletes a file from the repository."""
         sha = self.get_file_sha(repo_name, remote_path)
         if not sha:
-            print(f"❌ File '{remote_path}' not found in repo '{repo_name}'.")
-            return
+            # Message already printed by delete_path or previous check
+            return False
 
         url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
         data = {
-            "message": f"Delete {remote_path}",
+            "message": commit_message if commit_message else f"Delete {remote_path}",
             "sha": sha
         }
         
         response = requests.delete(url, json=data, headers=self.headers)
         if response.status_code == 200:
             print(f"🗑️  File '{remote_path}' deleted successfully.")
+            return True
         else:
-            print(f"❌ Failed to delete file: {response.json().get('message')}")
+            print(f"❌ Failed to delete file '{remote_path}': {response.json().get('message')}")
+            return False
 
 def main():
     parser = argparse.ArgumentParser(description="GitHub CLI Manager", epilog=f"Version: {__version__}")
@@ -199,6 +234,9 @@ def main():
     # Global command: check-account
     check_account_parser = parser.add_argument_group("Global Commands")
     check_account_parser.add_argument("--check-account", action="store_true", help="Show the connected GitHub account")
+
+    # Global command: show-local-repo
+    check_account_parser.add_argument("--show-local-repo", action="store_true", help="Show the GitHub repository initialized in the current local directory")
 
     # Command: create
     create_parser = subparsers.add_parser("create", help="Create a new repository")
@@ -224,16 +262,13 @@ def main():
     upload_parser = subparsers.add_parser("upload", help="Upload a specific file, folder, or the current directory to the repository")
     upload_parser.add_argument("repo", help="Target repository name")
     upload_parser.add_argument("path", default=".", nargs="?", help="Local file or folder path. Use '.' to upload the current directory.")
-    upload_parser.add_argument("--target", default="", help="Target path inside repo (optional)")
+    upload_parser.add_argument("-m", "--message", help="Custom commit message (optional)")
 
-    # Command: add-all (Mimics git add . && git push) - REMOVED, functionality merged into 'upload'
-    # add_all_parser = subparsers.add_parser("add-all", help="Upload ALL files in current directory (like git add .)")
-    # add_all_parser.add_argument("repo", help="Target repository name")
-
-    # Command: rm-file
-    rm_file_parser = subparsers.add_parser("rm-file", help="Delete a file from the repo")
-    rm_file_parser.add_argument("repo", help="Repository name")
-    rm_file_parser.add_argument("path", help="Path of the file inside the repo to delete")
+    # Command: rm
+    rm_parser = subparsers.add_parser("rm", help="Delete a file or folder from the repository")
+    rm_parser.add_argument("repo", help="Repository name")
+    rm_parser.add_argument("path", help="Path of the file or folder inside the repo to delete")
+    rm_parser.add_argument("-m", "--message", help="Custom commit message (optional)") # Add commit message option
 
     args = parser.parse_args()
 
@@ -247,6 +282,14 @@ def main():
     if args.check_account:
         print(f"Connected as: {gh.user}")
         return
+
+    if args.show_local_repo:
+        gh.show_local_repo_info()
+        return
+
+    if args.command is None: # Added to handle cases where only global args are used
+        parser.print_help()
+        sys.exit(0)
 
     if args.command == "create":
         gh.create_repo(args.name, args.private, args.desc)
@@ -263,19 +306,19 @@ def main():
             gh.set_visibility(args.name, True)
     elif args.command == "upload":
         local_path = args.path
+        commit_message = args.message # Get the commit message
+        target_path = getattr(args, 'target', '') # Safely get target, defaulting to empty string if not present
+
         if local_path == ".":
-            gh.upload_folder(args.repo, ".", args.target)
+            gh.upload_folder(args.repo, ".", target_path, commit_message)
         elif os.path.isfile(local_path):
-            gh.upload_file(args.repo, local_path, args.target)
+            gh.upload_file(args.repo, local_path, target_path, commit_message)
         elif os.path.isdir(local_path):
-            gh.upload_folder(args.repo, local_path, args.target)
+            gh.upload_folder(args.repo, local_path, target_path, commit_message)
         else:
             print(f"❌ Error: Path '{local_path}' not found or is not a file/directory.")
-    # elif args.command == "add-all": # REMOVED, functionality merged into 'upload'
-    #     # Pass "." as the local folder to scan the current directory
-    #     gh.upload_folder(args.repo, ".")
-    elif args.command == "rm-file":
-        gh.delete_file(args.repo, args.path)
+    elif args.command == "rm":
+        gh.delete_path(args.repo, args.path) # Use the new consolidated delete path
 
 if __name__ == "__main__":
     main()
