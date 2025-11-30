@@ -181,23 +181,16 @@ To seamlessly run `sora {command}` directly in PowerShell (without needing to ty
         sora upload my-repo my_local_folder --target project-files -m "Sync project files"
         ```
 
-*   **`rm <repo> <path> [-m MESSAGE]`**
+*   **`rm <repo> <path>`**
     *   **Use:** Deletes a file or recursively deletes a folder from the specified repository.
     *   **Arguments:**
         *   `<repo>`: The name of the target repository.
         *   `<path>`: The path of the file or folder inside the repository to delete.
-        *   `-m, --message` (optional): A custom commit message for the deletion. If not provided, a default message like "Delete <path>" will be used.
     *   **Examples:**
         ```bash
         # Delete a single file
         sora rm my-repo docs/old_file.txt
 
-        # Delete a single file with a custom message
-        sora rm my-repo docs/old_file.txt -m "Removing outdated documentation"
-
         # Delete a folder (and its contents) recursively
         sora rm my-repo old-folder
-
-        # Delete a folder with a custom message
-        sora rm my-repo old-folder -m "Cleaning up old feature files"
         ```
