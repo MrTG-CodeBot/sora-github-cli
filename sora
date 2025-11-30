@@ -54,7 +54,13 @@ class GitHubManager:
             print(f"   Private: {repo['private']}")
             print(f"   Stars: {repo['stargazers_count']}")
             print(f"   URL: {repo['html_url']}")
-            print(f"   Clone: {repo['clone_url']}\n")
+            print(f"   Clone: {repo['clone_url']}")
+            print(f"   Forks: {repo['forks_count']}")
+            print(f"   Open Issues: {repo['open_issues_count']}")
+            print(f"   Default Branch: {repo['default_branch']}")
+            print(f"   Language: {repo['language']}")
+            print(f"   Created At: {repo['created_at']}")
+            print(f"   Last Updated At: {repo['updated_at']}\n")
         else:
             print(f"❌ Repository not found or access denied.")
 
