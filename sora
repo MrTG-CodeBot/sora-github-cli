@@ -5,6 +5,8 @@ import sys
 import base64
 import requests
 
+__version__ = "1.0.0"
+
 class GitHubManager:
     def __init__(self, token):
         self.token = token
@@ -188,10 +190,15 @@ class GitHubManager:
             print(f"❌ Failed to delete file: {response.json().get('message')}")
 
 def main():
-    parser = argparse.ArgumentParser(description="GitHub CLI Manager")
+    parser = argparse.ArgumentParser(description="GitHub CLI Manager", epilog=f"Version: {__version__}")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--token", help="GitHub Personal Access Token")
     
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=False) # Changed to False for global commands
+
+    # Global command: check-account
+    check_account_parser = parser.add_argument_group("Global Commands")
+    check_account_parser.add_argument("--check-account", action="store_true", help="Show the connected GitHub account")
 
     # Command: create
     create_parser = subparsers.add_parser("create", help="Create a new repository")
@@ -214,14 +221,14 @@ def main():
     vis_parser.add_argument("--private", action="store_true", help="Make private")
 
     # Command: upload
-    upload_parser = subparsers.add_parser("upload", help="Upload a specific file or folder")
+    upload_parser = subparsers.add_parser("upload", help="Upload a specific file, folder, or the current directory to the repository")
     upload_parser.add_argument("repo", help="Target repository name")
-    upload_parser.add_argument("path", help="Local file or folder path")
+    upload_parser.add_argument("path", default=".", nargs="?", help="Local file or folder path. Use '.' to upload the current directory.")
     upload_parser.add_argument("--target", default="", help="Target path inside repo (optional)")
 
-    # Command: add-all (Mimics git add . && git push)
-    add_all_parser = subparsers.add_parser("add-all", help="Upload ALL files in current directory (like git add .)")
-    add_all_parser.add_argument("repo", help="Target repository name")
+    # Command: add-all (Mimics git add . && git push) - REMOVED, functionality merged into 'upload'
+    # add_all_parser = subparsers.add_parser("add-all", help="Upload ALL files in current directory (like git add .)")
+    # add_all_parser.add_argument("repo", help="Target repository name")
 
     # Command: rm-file
     rm_file_parser = subparsers.add_parser("rm-file", help="Delete a file from the repo")
@@ -237,6 +244,10 @@ def main():
 
     gh = GitHubManager(token)
 
+    if args.check_account:
+        print(f"Connected as: {gh.user}")
+        return
+
     if args.command == "create":
         gh.create_repo(args.name, args.private, args.desc)
     elif args.command == "view":
@@ -251,13 +262,18 @@ def main():
         elif args.private:
             gh.set_visibility(args.name, True)
     elif args.command == "upload":
-        if os.path.isfile(args.path):
-            gh.upload_file(args.repo, args.path, args.target)
-        elif os.path.isdir(args.path):
-            gh.upload_folder(args.repo, args.path, args.target)
-    elif args.command == "add-all":
-        # Pass "." as the local folder to scan the current directory
-        gh.upload_folder(args.repo, ".")
+        local_path = args.path
+        if local_path == ".":
+            gh.upload_folder(args.repo, ".", args.target)
+        elif os.path.isfile(local_path):
+            gh.upload_file(args.repo, local_path, args.target)
+        elif os.path.isdir(local_path):
+            gh.upload_folder(args.repo, local_path, args.target)
+        else:
+            print(f"❌ Error: Path '{local_path}' not found or is not a file/directory.")
+    # elif args.command == "add-all": # REMOVED, functionality merged into 'upload'
+    #     # Pass "." as the local folder to scan the current directory
+    #     gh.upload_folder(args.repo, ".")
     elif args.command == "rm-file":
         gh.delete_file(args.repo, args.path)
 
