@@ -4,8 +4,10 @@ import os
 import sys
 import base64
 import requests
+import zipfile
+import io
 
-__version__ = "1.0.0"
+__version__ = "1.3.0"
 
 class GitHubManager:
     def __init__(self, token):
@@ -27,8 +29,113 @@ class GitHubManager:
             print(f"Error: Invalid token or connection issue. {response.status_code}")
             sys.exit(1)
 
+    # --- NEW FEATURE: List Files/Folders (ls) ---
+    def list_contents(self, repo_name, limit=100, mode="all", path=""):
+        """Lists files and folders in the repo."""
+        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{path}"
+        response = requests.get(url, headers=self.headers)
+
+        if response.status_code == 200:
+            items = response.json()
+            
+            # Sort: Folders first, then files
+            items.sort(key=lambda x: (x['type'] != 'dir', x['name'].lower()))
+
+            print(f"\n📂 Contents of '{repo_name}' (Limit: {limit}):")
+            print("-" * 50)
+            
+            count = 0
+            for item in items:
+                if count >= limit:
+                    break
+
+                item_type = item['type'] # 'file' or 'dir'
+                name = item['name']
+
+                # Logic: fi (files only), fo (folders only), or all
+                if mode == "fi" and item_type != "file":
+                    continue
+                if mode == "fo" and item_type != "dir":
+                    continue
+
+                # Print with icons
+                if item_type == "dir":
+                    print(f"📁 {name}/")
+                    count += 1
+                elif item_type == "file":
+                    print(f"📄 {name}")
+                    count += 1
+            
+            if count == 0:
+                print("   (No items found matching criteria)")
+            print("-" * 50 + "\n")
+
+        else:
+            print(f"❌ Failed to fetch contents: {response.json().get('message')}")
+
+    def rename_repo(self, old_name, new_name):
+        print(f"🔄 Renaming '{old_name}' to '{new_name}'...")
+        url = f"{self.base_url}/repos/{self.user}/{old_name}"
+        data = {"name": new_name}
+        response = requests.patch(url, json=data, headers=self.headers)
+        
+        if response.status_code == 200:
+            print(f"✅ Success! Repository renamed.")
+            print(f"   Old Name: {old_name}")
+            print(f"   New Name: {new_name}")
+            print(f"   New URL: {response.json()['html_url']}")
+        else:
+            print(f"❌ Failed to rename: {response.json().get('message')}")
+
+    def get_issues(self, repo_name):
+        url = f"{self.base_url}/repos/{self.user}/{repo_name}/issues"
+        params = {"state": "open"} 
+        
+        response = requests.get(url, headers=self.headers, params=params)
+        
+        if response.status_code == 200:
+            issues = response.json()
+            if not issues:
+                print(f"✅ No open issues found in '{repo_name}'.")
+                return
+
+            print(f"\n🐞 Open Issues for '{repo_name}':")
+            print("-" * 50)
+            for issue in issues:
+                if 'pull_request' in issue:
+                    continue
+                print(f"#{issue['number']} - {issue['title']}")
+                print(f"   Created by: {issue['user']['login']}")
+                print(f"   Link: {issue['html_url']}\n")
+        else:
+            print(f"❌ Failed to fetch issues: {response.json().get('message')}")
+
+    def pull_repo(self, repo_name, path="."):
+        print(f"⬇️  Pulling (Downloading) '{repo_name}'...")
+        
+        repo_info_url = f"{self.base_url}/repos/{self.user}/{repo_name}"
+        repo_resp = requests.get(repo_info_url, headers=self.headers)
+        if repo_resp.status_code != 200:
+            print(f"❌ Repository not found.")
+            return
+        
+        default_branch = repo_resp.json().get("default_branch", "main")
+        
+        zip_url = f"{self.base_url}/repos/{self.user}/{repo_name}/zipball/{default_branch}"
+        response = requests.get(zip_url, headers=self.headers, stream=True)
+        
+        if response.status_code == 200:
+            try:
+                z = zipfile.ZipFile(io.BytesIO(response.content))
+                print(f"📦 Extracting to '{path}'...")
+                z.extractall(path)
+                print(f"✅ Repository '{repo_name}' pulled successfully!")
+            except Exception as e:
+                print(f"❌ Error extracting zip: {e}")
+        else:
+            print(f"❌ Failed to download: {response.status_code} {response.reason}")
+
     def create_repo(self, name, private=False, description=""):
-        """Creates a new repository."""
         url = f"{self.base_url}/user/repos"
         data = {
             "name": name,
@@ -44,7 +151,6 @@ class GitHubManager:
             print(f"❌ Failed to create repo: {response.json().get('message')}")
 
     def view_repo(self, name):
-        """Displays details about a repository."""
         url = f"{self.base_url}/repos/{self.user}/{name}"
         response = requests.get(url, headers=self.headers)
         if response.status_code == 200:
@@ -55,17 +161,13 @@ class GitHubManager:
             print(f"   Stars: {repo['stargazers_count']}")
             print(f"   URL: {repo['html_url']}")
             print(f"   Clone: {repo['clone_url']}")
-            print(f"   Forks: {repo['forks_count']}")
             print(f"   Open Issues: {repo['open_issues_count']}")
             print(f"   Default Branch: {repo['default_branch']}")
-            print(f"   Language: {repo['language']}")
-            print(f"   Created At: {repo['created_at']}")
-            print(f"   Last Updated At: {repo['updated_at']}\n")
+            print(f"   Last Updated: {repo['updated_at']}\n")
         else:
             print(f"❌ Repository not found or access denied.")
 
     def delete_repo(self, name):
-        """Deletes a repository."""
         confirmation = input(f"⚠️  Are you sure you want to DELETE '{self.user}/{name}'? This cannot be undone! (type 'yes'): ")
         if confirmation.lower() != 'yes':
             print("Operation cancelled.")
@@ -79,7 +181,6 @@ class GitHubManager:
             print(f"❌ Failed to delete repo: {response.json().get('message')}")
 
     def set_visibility(self, name, private):
-        """Sets the repository visibility to public or private."""
         url = f"{self.base_url}/repos/{self.user}/{name}"
         data = {"private": private}
         response = requests.patch(url, json=data, headers=self.headers)
@@ -90,7 +191,6 @@ class GitHubManager:
             print(f"❌ Failed to update visibility: {response.json().get('message')}")
 
     def get_file_sha(self, repo, path):
-        """Helper to get the SHA of a file (needed for updates/deletes)."""
         url = f"{self.base_url}/repos/{self.user}/{repo}/contents/{path}"
         response = requests.get(url, headers=self.headers)
         if response.status_code == 200:
@@ -98,7 +198,6 @@ class GitHubManager:
         return None
 
     def upload_file(self, repo_name, local_path, target_path=None, commit_message=None):
-        """Uploads a single file to the repository."""
         if not os.path.isfile(local_path):
             print(f"❌ Error: Local file '{local_path}' not found.")
             return
@@ -106,12 +205,8 @@ class GitHubManager:
         filename = os.path.basename(local_path)
         remote_path = target_path if target_path else filename
         
-        if remote_path.endswith('/'):
-            remote_path = remote_path + filename
-
-        # Skip uploading the script itself to prevent recursion if in same dir
-        if filename == "github_cli.py":
-            return
+        if target_path and not os.path.splitext(target_path)[1]: 
+             remote_path = f"{target_path}/{filename}".replace("//", "/")
 
         try:
             with open(local_path, "rb") as f:
@@ -124,7 +219,7 @@ class GitHubManager:
         
         sha = self.get_file_sha(repo_name, remote_path)
         message = f"Update {filename}" if sha else f"Create {filename}"
-        if commit_message: # Use custom message if provided
+        if commit_message: 
             message = commit_message
         
         data = {
@@ -142,19 +237,16 @@ class GitHubManager:
             print(f"❌ Failed to upload '{local_path}': {response.json().get('message')}")
 
     def upload_folder(self, repo_name, local_folder, target_folder="", commit_message=None):
-        """Recursively uploads a folder and its contents."""
         if not os.path.isdir(local_folder):
             print(f"❌ Error: Local directory '{local_folder}' not found.")
             return
 
-        # Folders to ignore (simulating .gitignore)
         IGNORE_DIRS = {'.git', '__pycache__', 'venv', 'env', '.idea', '.vscode', 'node_modules'}
         IGNORE_FILES = {'.DS_Store'}
 
         print(f"📂 Starting upload of folder '{local_folder}'...")
         
         for root, dirs, files in os.walk(local_folder):
-            # Modify dirs in-place to skip ignored directories
             dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
             
             for file in files:
@@ -162,24 +254,50 @@ class GitHubManager:
                     continue
 
                 local_file_path = os.path.join(root, file)
-                
-                # Calculate relative path to maintain structure
                 if local_folder == ".":
-                     # If uploading current dir, relative path is just the file path from root
                     relative_path = os.path.relpath(local_file_path, local_folder)
                 else:
                     relative_path = os.path.relpath(local_file_path, local_folder)
                 
-                remote_path = os.path.join(target_folder, relative_path).replace("\\", "/")
+                if target_folder:
+                    remote_path = os.path.join(target_folder, relative_path).replace("\\", "/")
+                else:
+                    remote_path = relative_path.replace("\\", "/")
                 
                 if remote_path.startswith('/'):
                     remote_path = remote_path[1:]
 
-                self.upload_file(repo_name, local_file_path, remote_path, commit_message)
+                self._upload_file_direct(repo_name, local_file_path, remote_path, commit_message)
         print("🏁 Upload complete.")
 
+    def _upload_file_direct(self, repo_name, local_path, remote_path, commit_message=None):
+        try:
+            with open(local_path, "rb") as f:
+                content = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            print(f"❌ Error reading file: {e}")
+            return
+
+        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
+        sha = self.get_file_sha(repo_name, remote_path)
+        
+        filename = os.path.basename(local_path)
+        message = f"Update {filename}" if sha else f"Create {filename}"
+        if commit_message:
+            message = commit_message
+
+        data = {"message": message, "content": content}
+        if sha:
+            data["sha"] = sha
+
+        response = requests.put(url, json=data, headers=self.headers)
+        if response.status_code in [200, 201]:
+            action = "Updated" if sha else "Uploaded"
+            print(f"✅ {action} '{local_path}' -> '{remote_path}'")
+        else:
+            print(f"❌ Failed to upload '{local_path}': {response.json().get('message')}")
+
     def get_repo_contents(self, repo_name, path=""):
-        """Helper to get contents of a directory in the repository."""
         url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{path}"
         response = requests.get(url, headers=self.headers)
         if response.status_code == 200:
@@ -187,40 +305,30 @@ class GitHubManager:
         return None
 
     def delete_path(self, repo_name, remote_path, commit_message=None):
-        """Deletes a file or recursively deletes a folder from the repository."""
         print(f"Attempting to delete: {remote_path} from {repo_name}")
         contents = self.get_repo_contents(repo_name, remote_path)
 
-        if contents is None: # Path not found
+        if contents is None:
             print(f"❌ Path '{remote_path}' not found in repo '{repo_name}'.")
             return False
 
-        if isinstance(contents, list): # It's a directory
+        if isinstance(contents, list): 
             print(f"📂 Deleting folder '{remote_path}' recursively...")
             for item in contents:
                 item_path = item['path']
-                if not self.delete_path(repo_name, item_path, commit_message): # Recursively delete
-                    print(f"❌ Failed to delete '{item_path}'. Aborting folder deletion.")
+                if not self.delete_path(repo_name, item_path, commit_message):
                     return False
-            # After deleting all contents, the directory itself is effectively gone on GitHub.
-            # We don't explicitly delete directories via SHA, only files.
             print(f"✅ Folder '{remote_path}' and its contents deleted successfully.")
             return True
-        else: # It's a file
+        else: 
             return self.delete_file(repo_name, remote_path, commit_message)
 
     def delete_file(self, repo_name, remote_path, commit_message=None):
-        """Deletes a file from the repository."""
         sha = self.get_file_sha(repo_name, remote_path)
-        if not sha:
-            # Message already printed by delete_path or previous check
-            return False
+        if not sha: return False
 
         url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
-        data = {
-            "message": f"Delete {remote_path}",
-            "sha": sha
-        }
+        data = {"message": f"Delete {remote_path}", "sha": sha}
         
         response = requests.delete(url, json=data, headers=self.headers)
         if response.status_code == 200:
@@ -235,14 +343,10 @@ def main():
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--token", help="GitHub Personal Access Token")
     
-    subparsers = parser.add_subparsers(dest="command", required=False) # Changed to False for global commands
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
-    # Global command: check-account
     check_account_parser = parser.add_argument_group("Global Commands")
     check_account_parser.add_argument("--check-account", action="store_true", help="Show the connected GitHub account")
-
-    # Global command: show-local-repo
-    check_account_parser.add_argument("--show-local-repo", action="store_true", help="Show the GitHub repository initialized in the current local directory")
 
     # Command: create
     create_parser = subparsers.add_parser("create", help="Create a new repository")
@@ -253,6 +357,28 @@ def main():
     # Command: view
     view_parser = subparsers.add_parser("view", help="View repository details")
     view_parser.add_argument("name", help="Name of the repository")
+
+    # Command: rename 
+    rename_parser = subparsers.add_parser("rename", help="Rename a repository")
+    rename_parser.add_argument("old_name", help="Current name of the repository")
+    rename_parser.add_argument("new_name", help="New name for the repository")
+
+    # Command: ls (List contents)
+    ls_parser = subparsers.add_parser("ls", help="List files and folders in a repo")
+    ls_parser.add_argument("name", help="Name of the repository")
+    ls_parser.add_argument("limit", nargs='?', default=100, type=int, help="Limit number of items displayed (default: 100)")
+    ls_parser.add_argument("--fi", action="store_true", help="Show only files")
+    ls_parser.add_argument("--fo", action="store_true", help="Show only folders")
+    ls_parser.add_argument("--path", default="", help="Sub-folder path to list (optional)")
+
+    # Command: issues
+    issues_parser = subparsers.add_parser("issues", help="Get open issues from a repository")
+    issues_parser.add_argument("name", help="Name of the repository")
+
+    # Command: pull
+    pull_parser = subparsers.add_parser("pull", help="Download (pull) the repository")
+    pull_parser.add_argument("name", help="Name of the repository")
+    pull_parser.add_argument("--dest", default=".", help="Destination folder (default: current directory)")
 
     # Command: delete
     delete_parser = subparsers.add_parser("delete", help="Delete a repository")
@@ -269,6 +395,7 @@ def main():
     upload_parser.add_argument("repo", help="Target repository name")
     upload_parser.add_argument("path", default=".", nargs="?", help="Local file or folder path. Use '.' to upload the current directory.")
     upload_parser.add_argument("-m", "--message", help="Custom commit message (optional)")
+    upload_parser.add_argument("--target", help="Target path/folder inside the repository")
 
     # Command: rm
     rm_parser = subparsers.add_parser("rm", help="Delete a file or folder from the repository")
@@ -288,11 +415,7 @@ def main():
         print(f"Connected as: {gh.user}")
         return
 
-    if args.show_local_repo:
-        gh.show_local_repo_info()
-        return
-
-    if args.command is None: # Added to handle cases where only global args are used
+    if args.command is None:
         parser.print_help()
         sys.exit(0)
 
@@ -300,6 +423,23 @@ def main():
         gh.create_repo(args.name, args.private, args.desc)
     elif args.command == "view":
         gh.view_repo(args.name)
+    elif args.command == "rename":
+        gh.rename_repo(args.old_name, args.new_name)
+    
+    # Logic for ls / view-fi-fo
+    elif args.command == "ls":
+        mode = "all"
+        if args.fi and not args.fo:
+            mode = "fi"
+        elif args.fo and not args.fi:
+            mode = "fo"
+        
+        gh.list_contents(args.name, args.limit, mode, args.path)
+
+    elif args.command == "issues":
+        gh.get_issues(args.name)
+    elif args.command == "pull":
+        gh.pull_repo(args.name, args.dest)
     elif args.command == "delete":
         gh.delete_repo(args.name)
     elif args.command == "visibility":
@@ -311,8 +451,8 @@ def main():
             gh.set_visibility(args.name, True)
     elif args.command == "upload":
         local_path = args.path
-        commit_message = args.message # Get the commit message
-        target_path = getattr(args, 'target', '') # Safely get target, defaulting to empty string if not present
+        commit_message = args.message
+        target_path = getattr(args, 'target', '')
 
         if local_path == ".":
             gh.upload_folder(args.repo, ".", target_path, commit_message)
@@ -321,7 +461,7 @@ def main():
         elif os.path.isdir(local_path):
             gh.upload_folder(args.repo, local_path, target_path, commit_message)
         else:
-            print(f"❌ Error: Path '{local_path}' not found or is not a file/directory.")
+            print(f"❌ Error: Path '{local_path}' not found.")
     elif args.command == "rm":
         gh.delete_path(args.repo, args.path)
 
