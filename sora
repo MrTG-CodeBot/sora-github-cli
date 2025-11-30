@@ -180,7 +180,7 @@ class GitHubManager:
             return response.json()
         return None
 
-    def delete_path(self, repo_name, remote_path):
+    def delete_path(self, repo_name, remote_path, commit_message=None):
         """Deletes a file or recursively deletes a folder from the repository."""
         print(f"Attempting to delete: {remote_path} from {repo_name}")
         contents = self.get_repo_contents(repo_name, remote_path)
@@ -193,7 +193,7 @@ class GitHubManager:
             print(f"📂 Deleting folder '{remote_path}' recursively...")
             for item in contents:
                 item_path = item['path']
-                if not self.delete_path(repo_name, item_path): # Recursively delete
+                if not self.delete_path(repo_name, item_path, commit_message): # Recursively delete
                     print(f"❌ Failed to delete '{item_path}'. Aborting folder deletion.")
                     return False
             # After deleting all contents, the directory itself is effectively gone on GitHub.
@@ -201,7 +201,7 @@ class GitHubManager:
             print(f"✅ Folder '{remote_path}' and its contents deleted successfully.")
             return True
         else: # It's a file
-            return self.delete_file(repo_name, remote_path)
+            return self.delete_file(repo_name, remote_path, commit_message)
 
     def delete_file(self, repo_name, remote_path, commit_message=None):
         """Deletes a file from the repository."""
@@ -212,7 +212,7 @@ class GitHubManager:
 
         url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
         data = {
-            "message": commit_message if commit_message else f"Delete {remote_path}",
+            "message": f"Delete {remote_path}",
             "sha": sha
         }
         
@@ -268,7 +268,6 @@ def main():
     rm_parser = subparsers.add_parser("rm", help="Delete a file or folder from the repository")
     rm_parser.add_argument("repo", help="Repository name")
     rm_parser.add_argument("path", help="Path of the file or folder inside the repo to delete")
-    rm_parser.add_argument("-m", "--message", help="Custom commit message (optional)") # Add commit message option
 
     args = parser.parse_args()
 
@@ -318,7 +317,7 @@ def main():
         else:
             print(f"❌ Error: Path '{local_path}' not found or is not a file/directory.")
     elif args.command == "rm":
-        gh.delete_path(args.repo, args.path) # Use the new consolidated delete path
+        gh.delete_path(args.repo, args.path)
 
 if __name__ == "__main__":
     main()
