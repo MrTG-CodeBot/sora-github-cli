@@ -88,50 +88,30 @@ To seamlessly run `sora {command}` directly in PowerShell (without needing to ty
 
 ## Commands
 
-*   **`create <name> [--private] [--desc DESCRIPTION]`**
-    *   **Use:** Creates a new GitHub repository.
-    *   **Example:**
-        ```bash
-        sora create my-new-repo --private --desc "My awesome private project"
-        ```
-
-*   **`view <name>`**
-    *   **Use:** Displays details about a specific GitHub repository.
-    *   **Example:**
-        ```bash
-        sora view my-new-repo
-        ```
-
-*   **`delete <name>`**
-    *   **Use:** Deletes a GitHub repository. **This action is irreversible.**
-    *   **Example:**
-        ```bash
-        sora delete my-old-repo
-        ```
-
-*   **`visibility <name> [--public | --private]`**
-    *   **Use:** Changes the visibility of a repository (public or private).
-    *   **Example:**
-        ```bash
-        sora visibility my-repo --public
-        ```
-
-*   **`upload <repo> <path> [--target TARGET_PATH]`**
-    *   **Use:** Uploads a file or a folder to a specified repository.
+*   **`upload <repo> [path] [--target TARGET_PATH]`**
+    *   **Use:** Uploads a file, a folder, or the entire current directory to a specified repository. If `path` is omitted, it defaults to uploading the current directory (`.`).
+    *   **Arguments:**
+        *   `<repo>`: The name of the target repository.
+        *   `[path]` (optional): Local file or folder path. Use '.' to upload the current directory.
+        *   `--target` (optional): The target path inside the repository where the file/folder will be uploaded. If not provided, the file/folder will be uploaded to the root of the repository.
     *   **Examples:**
         ```bash
-        # Upload a single file
+        # Upload all files in the current directory
+        sora upload my-repo
+        # or explicitly
+        sora upload my-repo .
+
+        # Upload a single file to the repository root
+        sora upload my-repo my_local_file.txt
+
+        # Upload a single file to a specific path within the repo
         sora upload my-repo my_local_file.txt --target docs/my_remote_file.txt
 
-        # Upload a folder
-        sora upload my-repo my_local_folder --target project-files
-        ```
+        # Upload a local folder to the repository root
+        sora upload my-repo my_local_folder
 
-*   **`add-all <repo>`**
-    *   **Use:** Uploads all files in the current directory (and its subdirectories, excluding common ignored directories) to the specified repository.
-    *   **Example:**
-        ```bash
-        sora add-all my-repo
+        # Upload a local folder to a specific path within the repo
+        sora upload my-repo my_local_folder --target project-files
         ```
 
 *   **`rm-file <repo> <path>`**
