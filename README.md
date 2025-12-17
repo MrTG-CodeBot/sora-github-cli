@@ -590,7 +590,8 @@ Need help? We're here for you!
 
 <div align="center">
 
+### Made with ❤️ by MrTG-CodeBot
+
 **[⬆ Back to Top](#-sora---github-cli-manager)**
 
 </div>
-
