@@ -1,255 +1,597 @@
-# GitHub CLI Manager - Usage Guide
+<div align="center">
 
-This script provides a command-line interface for interacting with GitHub.
+<img src="sora.jpeg" alt="Sora Logo" width="150" height="150" />
 
-## Setup
+# 🚀 Sora - GitHub CLI Manager
 
-### 1. GitHub Personal Access Token (`GITHUB_TOKEN`)
+### Simple, Powerful, and User-Friendly GitHub Repository Management
 
-To use this CLI, you need a GitHub Personal Access Token (PAT). This token is required for authentication with the GitHub API and should have the necessary `repo` scopes to manage your repositories.
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/MrTG-CodeBot/sora-github-cli/releases)
+[![Python](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/MrTG-CodeBot/sora-github-cli?style=social)](https://github.com/MrTG-CodeBot/sora-github-cli/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/MrTG-CodeBot/sora-github-cli)](https://github.com/MrTG-CodeBot/sora-github-cli/issues)
 
-#### How to get a GitHub Personal Access Token:
-1.  Go to your GitHub account `Settings`.
-2.  In the left sidebar, click on `Developer settings`.
-3.  Click on `Personal access tokens` -> `Tokens (classic)`.
-4.  Click `Generate new token`.
-5.  Give your token a descriptive name (e.g., "sora-cli-token").
-6.  **Select the `repo` scope** (this grants full control of private and public repositories, which is needed for all CLI functions). You may also want to select `workflow` if you plan to update GitHub Actions workflows.
-7.  Click `Generate token`.
-8.  **Copy the generated token immediately!** You will not be able to see it again.
+[Features](#-features) •
+[Installation](#-installation) •
+[Quick Start](#-quick-start) •
+[Documentation](#-documentation) •
+[Contributing](#-contributing)
 
-#### Where to add the `GITHUB_TOKEN`:
+</div>
 
-It is highly recommended to set your GitHub Personal Access Token as an environment variable named `GITHUB_TOKEN`.
+---
 
-* **Temporarily (for the current PowerShell session):**
-    ```powershell
-    $env:GITHUB_TOKEN="YOUR_GITHUB_TOKEN"
-    ```
-    Replace `"YOUR_GITHUB_TOKEN"` with your actual GitHub Personal Access Token.
+## 📖 Overview
 
-* **Persistently (across PowerShell sessions):**
-    Add the line above to your PowerShell profile. To find your profile path, type `$profile` in PowerShell. If the file doesn't exist, create it using `New-Item -Path $profile -ItemType File -Force`.
+**Sora** is a powerful command-line interface (CLI) tool that simplifies GitHub repository management. Whether you're uploading files, reading code, managing repositories, or exploring branches, Sora provides an intuitive and efficient way to interact with GitHub without leaving your terminal.
 
-Alternatively, you can provide the token with each command using the `--token` argument: `python sora --token YOUR_GITHUB_TOKEN view my-repo`.
+### Why Sora?
 
-### 2. Add the script's folder path to the System PATH (Windows)
+- 🎯 **Simple & Intuitive** - Clean commands that just make sense
+- ⚡ **Fast & Efficient** - Optimized API calls with automatic retry logic
+- 🎨 **Beautiful Output** - Color-coded, emoji-rich terminal display
+- 🛡️ **Safe Operations** - Confirmation prompts for destructive actions
+- 🔄 **Smart Retry** - Exponential backoff for network errors
+- 📦 **Feature-Rich** - 10+ powerful features for complete GitHub management
 
-To be able to run `sora` commands directly from any terminal window without prefixing `python`, you need to add the directory containing the `sora` script to your system's `PATH` environment variable. This needs to be done once after cloning the repository.
+---
 
-1.  **Open PowerShell as Administrator:**
-    * Search for "PowerShell" in the Start menu.
-    * Right-click on "Windows PowerShell" and select "Run as administrator".
+## ✨ Features
 
-2.  **Navigate to your cloned repository directory:**
-    ```powershell
-    cd C:\Users\amaln\Downloads\github_cmd
-    ```
-    (Replace `C:\Users\amaln\Downloads\github_cmd` with the actual path to your cloned `github_cmd` directory.)
+<table>
+<tr>
+<td width="50%">
 
-3.  **Add the current directory to your system's `PATH` permanently:**
-    Execute the following command in the *Administrator PowerShell*:
+### 📂 Repository Management
+- ✅ List all your repositories
+- ✅ Create new repositories
+- ✅ View repository details
+- ✅ Rename repositories
+- ✅ Update repository settings
+- ✅ Delete repositories
+- ✅ Show detailed statistics
 
-    ```powershell
-    [Environment]::SetEnvironmentVariable("Path", "$([Environment]::GetEnvironmentVariable("Path", "Machine"));$((Get-Location).Path)", "Machine")
-    ```
-    This command appends the current directory's full path to the system-wide `PATH` environment variable.
+</td>
+<td width="50%">
 
-4.  **Restart PowerShell:**
-    Close and reopen any PowerShell windows for the changes to take effect.
+### 📄 File Operations
+- ✅ List repository contents
+- ✅ Read file contents directly
+- ✅ Upload files & folders
+- ✅ Delete files & folders
+- ✅ Download repositories
+- ✅ Branch management
+- ✅ Smart path handling
 
-### 3. Add the `sora` function to your PowerShell Profile (`Microsoft.PowerShell_profile.ps1`)
+</td>
+</tr>
+</table>
 
-To seamlessly run `sora {command}` directly in PowerShell (without needing to type `python sora`), add the following function to your PowerShell profile file.
+### 🔥 Advanced Features
 
-1.  **Open your PowerShell profile:**
-    In your PowerShell terminal, type `$profile` and press `Enter`. This will show you the full path to your profile file (e.g., `C:\Users\YourUsername\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1`).
+| Feature | Description |
+|---------|-------------|
+| 🔄 **Auto Retry** | Automatic retry with exponential backoff for network failures |
+| 📊 **Rich Statistics** | Detailed repo stats including stars, forks, and engagement |
+| 🌲 **Branch Support** | List and work with different branches |
+| 🎨 **Color Output** | Beautiful, color-coded terminal output with icons |
+| 📦 **Bulk Operations** | Upload/delete multiple files with progress tracking |
+| 🛡️ **File Validation** | Automatic file size checks (100MB limit) |
+| 💾 **Smart Caching** | Optimized API usage for faster operations |
+| ⚙️ **Flexible Config** | Support for both inline tokens and environment variables |
 
-2.  **Create the profile file if it doesn't exist:**
-    If the file path returned by `$profile` indicates the file doesn't exist, create it using:
-    ```powershell
-    New-Item -Path $profile -ItemType File -Force
-    ```
+---
 
-3.  **Edit the profile file:**
-    Open the profile file in a text editor.
+## 🚀 Installation
 
-4.  **Add the `sora` function:**
-    Paste the following function block into the end of your profile file:
-    ```powershell
-    function sora {
-        python C:\Users\amaln\Downloads\github_cmd\sora @args
-    }
-    ```
-    **Important:** Ensure `C:\Users\amaln\Downloads\github_cmd\sora` is the **correct and absolute path** to your `sora` script.
+### Prerequisites
 
-5.  **Save the file and restart PowerShell:**
-    Save the changes to the profile file, then close and reopen all your PowerShell windows for the function to be loaded.
+- **Python 3.6+** installed on your system
+- A **GitHub Personal Access Token** with `repo` permissions
 
-## Commands
+### Step 1: Get the Script
 
-### Global Arguments (can be used with or without a subcommand)
+Download or clone this repository:
 
-* **`--version`**
-    * **Use:** Displays the version of the GitHub CLI Manager.
-    * **Example:**
-        ```bash
-        sora --version
-        ```
+```bash
+# Using git
+git clone https://github.com/MrTG-CodeBot/sora-github-cli.git
+cd sora-github-cli
 
-* **`--check-account`**
-    * **Use:** Shows the GitHub username of the currently connected account.
-    * **Example:**
-        ```bash
-        sora --check-account
-        ```
+# Or download directly
+curl -O https://raw.githubusercontent.com/MrTG-CodeBot/sora-github-cli/main/sora
+```
 
-* **`--show-local-repo`**
-    * **Use:** Detects and displays the GitHub repository name that the current local Git repository is connected to.
-    * **Important:** This command must be run within a directory that is a Git repository (i.e., contains a `.git` folder) and has a remote origin configured. If not, it will display an error.
-    * **Example:**
-        ```bash
-        # Navigate to your local Git repository first
-        cd C:\path\to\your\repo
-        sora --show-local-repo
-        ```
+### Step 2: Make it Executable (Linux/macOS)
 
-### Subcommands
+```bash
+chmod +x sora
+```
 
-* **`create <name> [--private] [--desc DESCRIPTION]`**
-    * **Use:** Creates a new GitHub repository.
-    * **Arguments:**
-        * `<name>`: The name of the new repository.
-        * `--private` (optional): Makes the repository private.
-        * `--desc` (optional): Provides a description for the repository.
-    * **Example:**
-        ```bash
-        sora create my-new-repo --private --desc "My awesome private project"
-        ```
+### Step 3: Add to PATH (Optional)
 
-* **`view <name>`**
-    * **Use:** Displays details about a specific GitHub repository.
-    * **Arguments:**
-        * `<name>`: The name of the repository to view.
-    * **Example:**
-        ```bash
-        sora view my-new-repo
-        ```
+**Linux/macOS:**
+```bash
+sudo mv sora /usr/local/bin/
+```
 
-* **`ls <name> [limit] [--fi] [--fo] [--path PATH]`**
-    * **Use:** Lists the contents (files and folders) of a repository.
-    * **Arguments:**
-        * `<name>`: The name of the repository.
-        * `[limit]` (optional): Max number of items to display (default: 100).
-        * `--fi` (optional): Show **files only**.
-        * `--fo` (optional): Show **folders only**.
-        * `--path` (optional): Specify a sub-folder to list contents from.
-    * **Examples:**
-        ```bash
-        # List all files and folders
-        sora ls my-repo
+**Windows:**
+Add the script directory to your PATH environment variable.
 
-        # List only files
-        sora ls my-repo --fi
+### Step 4: Install Dependencies
 
-        # List only folders
-        sora ls my-repo --fo
+```bash
+pip install requests
+```
 
-        # List only the first 5 files
-        sora ls my-repo 5 --fi
+---
 
-        # List contents of a sub-folder 'src'
-        sora ls my-repo --path src
-        ```
+## 🎯 Quick Start
 
-* **`rename <old_name> <new_name>`**
-    * **Use:** Renames an existing repository.
-    * **Arguments:**
-        * `<old_name>`: The current name of the repository.
-        * `<new_name>`: The new name you want to give it.
-    * **Example:**
-        ```bash
-        sora rename old-project-name new-cool-project
-        ```
+### 1. Get Your GitHub Token
 
-* **`issues <name>`**
-    * **Use:** Fetches and displays a list of all open issues in the specified repository. It shows the Issue ID, Title, Creator, and a direct link.
-    * **Arguments:**
-        * `<name>`: The name of the repository to check.
-    * **Example:**
-        ```bash
-        sora issues my-bug-tracker
-        ```
+1. Go to [GitHub Settings → Tokens](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Give it a name (e.g., "Sora CLI")
+4. Select scopes: `repo` (Full control of private repositories)
+5. Click "Generate token"
+6. **Copy the token** (you won't see it again!)
 
-* **`pull <name> [--dest DESTINATION]`**
-    * **Use:** Downloads the latest version of the repository (default branch) as a ZIP file and extracts it to the specified folder.
-    * **Arguments:**
-        * `<name>`: The name of the repository to download.
-        * `--dest` (optional): The destination folder where the files should be extracted. Defaults to the current directory (`.`).
-    * **Examples:**
-        ```bash
-        # Download to current folder
-        sora pull my-website
+### 2. Save Your Token (Windows)
 
-        # Download to a specific folder
-        sora pull my-website --dest ./downloads/my-site
-        ```
+```bash
+sora --set-token YOUR_GITHUB_TOKEN
+```
 
-* **`delete <name>`**
-    * **Use:** Deletes a GitHub repository. **This action is irreversible.**
-    * **Arguments:**
-        * `<name>`: The name of the repository to delete.
-    * **Example:**
-        ```bash
-        sora delete my-old-repo
-        ```
+Or set it as an environment variable:
 
-* **`visibility <name> [--public | --private]`**
-    * **Use:** Changes the visibility of a repository (public or private).
-    * **Arguments:**
-        * `<name>`: The name of the repository.
-        * `--public`: Makes the repository public.
-        * `--private`: Makes the repository private.
-    * **Example:**
-        ```bash
-        sora visibility my-repo --public
-        ```
+**Windows (PowerShell):**
+```powershell
+$env:GITHUB_TOKEN="your_token_here"
+```
 
-* **`upload <repo> [path] [--target TARGET_PATH] [-m MESSAGE]`**
-    * **Use:** Uploads a file, a folder, or the entire current directory to a specified repository. If `path` is omitted, it defaults to uploading the current directory (`.`).
-    * **Arguments:**
-        * `<repo>`: The name of the target repository.
-        * `[path]` (optional): Local file or folder path. Use '.' to upload the current directory.
-        * `--target` (optional): The target path inside the repository where the file/folder will be uploaded. If not provided, the file/folder will be uploaded to the root of the repository.
-        * `-m, --message` (optional): A custom commit message for the upload. If not provided, a default message like "Update <filename>" or "Create <filename>" will be used.
-    * **Examples:**
-        ```bash
-        # Upload all files in the current directory with a custom message
-        sora upload my-repo -m "Initial commit of project files"
+**Linux/macOS:**
+```bash
+export GITHUB_TOKEN="your_token_here"
+```
 
-        # Upload a single file to the repository root with a custom message
-        sora upload my-repo my_local_file.txt -m "Add important configuration file"
+### 3. Verify Authentication
 
-        # Upload a single file to a specific path within the repo with a custom message
-        sora upload my-repo my_local_file.txt --target docs/my_remote_file.txt -m "Update documentation"
+```bash
+sora --check-account
+```
 
-        # Upload a local folder to the repository root with a custom message
-        sora upload my-repo my_local_folder -m "Upload new feature folder"
+Output:
+```
+✓ Connected as: YourUsername
+```
 
-        # Upload a local folder to a specific path within the repo with a custom message
-        sora upload my-repo my_local_folder --target project-files -m "Sync project files"
-        ```
+### 4. Start Using Sora!
 
-* **`rm <repo> <path>`**
-    * **Use:** Deletes a file or recursively deletes a folder from the specified repository.
-    * **Arguments:**
-        * `<repo>`: The name of the target repository.
-        * `<path>`: The path of the file or folder inside the repository to delete.
-    * **Examples:**
-        ```bash
-        # Delete a single file
-        sora rm my-repo docs/old_file.txt
+```bash
+# List your repositories
+sora repos
 
-        # Delete a folder (and its contents) recursively
-        sora rm my-repo old-folder
-        ```
+# Create a new repository
+sora create my-awesome-project --private --desc "My new project"
+
+# Upload files
+sora push my-repo ./my-project
+
+# Download a repository
+sora pull my-repo --dest ./downloads
+```
+
+---
+
+## 📚 Documentation
+
+### Commands Overview
+
+#### 🏠 Repository Management
+
+```bash
+# List all repositories
+sora repos
+sora repos --visibility private
+sora repos --sort created --limit 10
+
+# Create a repository
+sora create <name> [--private] [--desc "description"]
+
+# View repository details
+sora view <repo>
+
+# Show detailed statistics
+sora stats <repo>
+
+# Rename a repository
+sora rename <old-name> <new-name>
+
+# Update repository settings
+sora update <repo> --desc "New description"
+sora update <repo> --private
+sora update <repo> --public
+
+# Delete a repository
+sora delete <repo>
+sora delete <repo> --force
+```
+
+#### 📁 File Operations
+
+```bash
+# List repository contents
+sora ls <repo>
+sora ls <repo> --path src/
+sora ls <repo> --files-only
+sora ls <repo> --folders-only
+
+# Read file contents
+sora cat <repo> <file-path>
+sora cat <repo> README.md --raw
+
+# Upload file or folder
+sora push <repo> <local-path>
+sora push <repo> ./file.txt --target remote/path/
+sora push <repo> ./folder -m "Upload project files"
+
+# Delete file or folder
+sora rm <repo> <path>
+sora rm <repo> old-folder --force
+
+# Download repository
+sora pull <repo>
+sora pull <repo> --dest ./downloads
+sora pull <repo> --branch develop
+```
+
+#### 🌲 Branch Management
+
+```bash
+# List all branches
+sora branches <repo>
+```
+
+#### 🔐 Authentication
+
+```bash
+# Check current user
+sora --token YOUR_TOKEN --check-account
+
+# Save token (Windows)
+sora --set-token YOUR_TOKEN
+sora --set-token YOUR_TOKEN --scope system
+```
+
+### Command Reference Table
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `repos` | List repositories | `sora repos --visibility private` |
+| `create` | Create repository | `sora create my-app --private` |
+| `view` | View repo info | `sora view my-repo` |
+| `stats` | Show statistics | `sora stats my-repo` |
+| `rename` | Rename repository | `sora rename old new` |
+| `update` | Update settings | `sora update my-repo --desc "text"` |
+| `delete` | Delete repository | `sora delete my-repo` |
+| `ls` | List contents | `sora ls my-repo --path src/` |
+| `cat` | Read file | `sora cat my-repo README.md` |
+| `push` | Upload files | `sora push my-repo ./folder` |
+| `rm` | Delete files | `sora rm my-repo old-file.txt` |
+| `pull` | Download repo | `sora pull my-repo --dest ./dl` |
+| `branches` | List branches | `sora branches my-repo` |
+
+---
+
+## 💡 Usage Examples
+
+### Example 1: Create and Setup a New Project
+
+```bash
+# Create a new private repository
+sora create my-new-project --private --desc "My awesome new project"
+
+# Upload your project files
+sora push my-new-project ./my-project -m "Initial commit"
+
+# Verify the upload
+sora ls my-new-project
+```
+
+### Example 2: Download and Explore a Repository
+
+```bash
+# Download repository
+sora pull username/repo --dest ./my-downloads
+
+# View repository statistics
+sora stats username/repo
+
+# List branches
+sora branches username/repo
+
+# Read a specific file
+sora cat username/repo package.json
+```
+
+### Example 3: Update Repository Settings
+
+```bash
+# Update description
+sora update my-repo --desc "A better description"
+
+# Make repository public
+sora update my-repo --public
+
+# Rename repository
+sora rename old-name new-name
+```
+
+### Example 4: Clean Up Old Files
+
+```bash
+# List repository contents
+sora ls my-repo
+
+# Delete old files
+sora rm my-repo old-folder --force
+sora rm my-repo deprecated.txt
+```
+
+### Example 5: Bulk Operations
+
+```bash
+# Upload entire project folder
+sora push my-repo ./my-project -m "Upload all project files"
+
+# Download multiple repos (using loop)
+for repo in repo1 repo2 repo3; do
+  sora pull $repo --dest ./backups/$repo
+done
+```
+
+---
+
+## 🎨 Output Examples
+
+### Beautiful Terminal Output
+
+```bash
+$ sora repos --limit 3
+
+ℹ Fetching your repositories (all)...
+
+📚 Your Repositories (3)
+────────────────────────────────────────────────────────────
+🌍 my-awesome-project [JavaScript] ⭐12
+   A cool web application built with React
+   https://github.com/username/my-awesome-project
+
+🔒 private-repo [Python]
+   Internal project management tool
+   https://github.com/username/private-repo
+
+🌍 sora-cli [Python] ⭐5
+   GitHub CLI manager
+   https://github.com/username/sora-cli
+────────────────────────────────────────────────────────────
+```
+
+```bash
+$ sora stats my-repo
+
+ℹ Fetching statistics for 'username/my-repo'...
+
+📊 Statistics for username/my-repo
+──────────────────────────────────────────────────────────────
+  General:
+    Description:  My awesome repository
+    Visibility:   🌍 Public
+    Created:      2024-01-15
+    Updated:      2024-12-17
+    Size:         2.45 MB
+    Language:     Python
+
+  Engagement:
+    ⭐ Stars:      42
+    👁  Watchers:   12
+    🔱 Forks:      8
+    ⚠  Issues:     3
+
+  Branches:
+    Default:      main
+
+  URLs:
+    Web:          https://github.com/username/my-repo
+    Clone:        https://github.com/username/my-repo.git
+──────────────────────────────────────────────────────────────
+```
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GITHUB_TOKEN` | Your GitHub Personal Access Token | `ghp_xxxxxxxxxxxxx` |
+
+### Setting the Token
+
+**Option 1: Use the built-in command (Windows)**
+```bash
+sora --set-token YOUR_TOKEN
+```
+
+**Option 2: Set environment variable manually**
+
+**Windows (PowerShell):**
+```powershell
+[System.Environment]::SetEnvironmentVariable('GITHUB_TOKEN', 'your_token', 'User')
+```
+
+**Linux/macOS (add to ~/.bashrc or ~/.zshrc):**
+```bash
+export GITHUB_TOKEN="your_token_here"
+```
+
+---
+
+## 🤝 Contributing
+
+We love contributions! Whether it's bug reports, feature requests, or code improvements, all contributions are welcome.
+
+### How to Contribute
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
+
+### Reporting Issues
+
+Found a bug or have a suggestion? Please [open an issue](https://github.com/MrTG-CodeBot/sora-github-cli/issues/new) with:
+
+- 🐛 Clear description of the bug
+- 📝 Steps to reproduce
+- 💻 Expected vs actual behavior
+- 🖼️ Screenshots (if applicable)
+
+### Feature Requests
+
+Have an idea for a new feature? We'd love to hear it! [Create a feature request](https://github.com/MrTG-CodeBot/sora-github-cli/issues/new) and describe:
+
+- 🎯 What problem it solves
+- 💡 How it should work
+- 🌟 Why it's useful
+
+---
+
+## 📋 Requirements
+
+- **Python:** 3.6 or higher
+- **Dependencies:**
+  - `requests` - For GitHub API calls
+- **GitHub:** Personal Access Token with `repo` scope
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### "Invalid token or connection issue"
+- **Solution:** Check your GitHub token is valid and has `repo` permissions
+- Re-generate token at: https://github.com/settings/tokens
+
+#### "Repository not found"
+- **Solution:** Check the spelling (GitHub is case-sensitive)
+- Ensure you have access to the repository
+
+#### "File too large (>100MB)"
+- **Solution:** GitHub has a 100MB file size limit
+- Consider using Git LFS for large files
+
+#### "Connection error"
+- **Solution:** Check your internet connection
+- Sora will automatically retry with exponential backoff
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2024 MrTG-CodeBot
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+```
+
+---
+
+## 🎯 Roadmap
+
+### Planned Features
+
+- [ ] 🔍 Search repositories
+- [ ] 📌 Pin/unpin repositories
+- [ ] 🏷️ Manage repository topics
+- [ ] 👥 Manage collaborators
+- [ ] 🔑 SSH key management
+- [ ] 📊 Advanced analytics
+- [ ] 🔔 Notifications support
+- [ ] 🌐 Multi-account support
+- [ ] 📱 Config file support
+- [ ] 🎨 Customizable themes
+
+---
+
+## 🌟 Show Your Support
+
+If you find Sora useful, please consider:
+
+- ⭐ **Starring the repository**
+- 🐦 **Sharing with others**
+- 💬 **Providing feedback**
+- 🤝 **Contributing to the project**
+
+---
+
+## 👨‍💻 Author
+
+**MrTG-CodeBot**
+
+- 🌐 Website: [amalnath.netlify.app](https://amalnath.netlify.app/)
+- 🐙 GitHub: [@MrTG-CodeBot](https://github.com/MrTG-CodeBot)
+- 📧 Email: [Create an issue](https://github.com/MrTG-CodeBot/sora-github-cli/issues)
+
+---
+
+## 🙏 Acknowledgments
+
+- Thanks to all [contributors](https://github.com/MrTG-CodeBot/sora-github-cli/graphs/contributors)
+- Inspired by the need for a simple, powerful GitHub CLI tool
+- Built with ❤️ using Python and GitHub API
+
+---
+
+## 📚 Related Projects
+
+- [GitHub CLI (gh)](https://cli.github.com/) - Official GitHub CLI
+- [hub](https://hub.github.com/) - Git wrapper for GitHub
+
+---
+
+## 📞 Support
+
+Need help? We're here for you!
+
+- 📖 **Documentation:** [View Docs](https://mrtg-codebot.github.io/sora-github-cli/)
+- 🐛 **Issues:** [Report a Bug](https://github.com/MrTG-CodeBot/sora-github-cli/issues)
+- 💬 **Discussions:** [Join the Discussion](https://github.com/MrTG-CodeBot/sora-github-cli/discussions)
+- 🌐 **Website:** [amalnath.netlify.app](https://amalnath.netlify.app/)
+
+---
+
+<div align="center">
+
+### Made with ❤️ by MrTG-CodeBot
+
+**[⬆ Back to Top](#-sora---github-cli-manager)**
+
+</div>
