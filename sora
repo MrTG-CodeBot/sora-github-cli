@@ -6,436 +6,1016 @@ import base64
 import requests
 import zipfile
 import io
-import platform
-import subprocess
+import time
+from typing import Optional, Tuple, List, Dict
 
-__version__ = "1.4.0"
+__version__ = "2.1.0"
+
+class Colors:
+    """ANSI color codes for terminal output"""
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+
+def print_success(msg):
+    print(f"{Colors.GREEN}✓{Colors.RESET} {msg}")
+
+def print_error(msg):
+    print(f"{Colors.RED}✗{Colors.RESET} {msg}")
+
+def print_info(msg):
+    print(f"{Colors.BLUE}ℹ{Colors.RESET} {msg}")
+
+def print_warning(msg):
+    print(f"{Colors.YELLOW}⚠{Colors.RESET} {msg}")
 
 class GitHubManager:
-    def __init__(self, token):
+    """Enhanced GitHub repository manager with advanced features"""
+    
+    def __init__(self, token: str):
         self.token = token
         self.base_url = "https://api.github.com"
         self.headers = {
             "Authorization": f"token {token}",
             "Accept": "application/vnd.github.v3+json"
         }
-        self.user = self.get_current_user()
+        self.user = self._get_current_user()
 
-    def get_current_user(self):
-        """Fetches the authenticated user's username."""
-        url = f"{self.base_url}/user"
-        response = requests.get(url, headers=self.headers)
-        if response.status_code == 200:
-            return response.json()['login']
-        else:
-            print(f"❌ Connection Failed: Invalid token (HTTP {response.status_code})")
-            sys.exit(1)
-
-    def list_contents(self, repo_name, limit=100, mode="all", path=""):
-        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{path}"
-        response = requests.get(url, headers=self.headers)
-
-        if response.status_code == 200:
-            items = response.json()
-            items.sort(key=lambda x: (x['type'] != 'dir', x['name'].lower()))
-
-            print(f"\n📂 Contents of '{repo_name}' (Limit: {limit}):")
-            print("-" * 50)
-            
-            count = 0
-            for item in items:
-                if count >= limit: break
-                item_type = item['type']
-                name = item['name']
-
-                if mode == "fi" and item_type != "file": continue
-                if mode == "fo" and item_type != "dir": continue
-
-                if item_type == "dir":
-                    print(f"📁 {name}/")
-                    count += 1
-                elif item_type == "file":
-                    print(f"📄 {name}")
-                    count += 1
-            
-            if count == 0: print("   (No items found matching criteria)")
-            print("-" * 50 + "\n")
-        else:
-            print(f"❌ Failed to fetch contents: {response.json().get('message')}")
-
-    def rename_repo(self, old_name, new_name):
-        print(f"🔄 Renaming '{old_name}' to '{new_name}'...")
-        url = f"{self.base_url}/repos/{self.user}/{old_name}"
-        data = {"name": new_name}
-        response = requests.patch(url, json=data, headers=self.headers)
-        
-        if response.status_code == 200:
-            print(f"✅ Success! Repository renamed.")
-            print(f"   Old Name: {old_name}")
-            print(f"   New Name: {new_name}")
-            print(f"   New URL: {response.json()['html_url']}")
-        else:
-            print(f"❌ Failed to rename: {response.json().get('message')}")
-
-    def get_issues(self, repo_name):
-        url = f"{self.base_url}/repos/{self.user}/{repo_name}/issues"
-        params = {"state": "open"} 
-        response = requests.get(url, headers=self.headers, params=params)
-        
-        if response.status_code == 200:
-            issues = response.json()
-            if not issues:
-                print(f"✅ No open issues found in '{repo_name}'.")
-                return
-            print(f"\n🐞 Open Issues for '{repo_name}':")
-            print("-" * 50)
-            for issue in issues:
-                if 'pull_request' in issue: continue
-                print(f"#{issue['number']} - {issue['title']}")
-                print(f"   Created by: {issue['user']['login']}")
-                print(f"   Link: {issue['html_url']}\n")
-        else:
-            print(f"❌ Failed to fetch issues: {response.json().get('message')}")
-
-    def pull_repo(self, repo_name, path="."):
-        print(f"⬇️  Pulling (Downloading) '{repo_name}'...")
-        repo_info_url = f"{self.base_url}/repos/{self.user}/{repo_name}"
-        repo_resp = requests.get(repo_info_url, headers=self.headers)
-        if repo_resp.status_code != 200:
-            print(f"❌ Repository not found.")
-            return
-        
-        default_branch = repo_resp.json().get("default_branch", "main")
-        zip_url = f"{self.base_url}/repos/{self.user}/{repo_name}/zipball/{default_branch}"
-        response = requests.get(zip_url, headers=self.headers, stream=True)
-        
-        if response.status_code == 200:
-            try:
-                z = zipfile.ZipFile(io.BytesIO(response.content))
-                print(f"📦 Extracting to '{path}'...")
-                z.extractall(path)
-                print(f"✅ Repository '{repo_name}' pulled successfully!")
-            except Exception as e:
-                print(f"❌ Error extracting zip: {e}")
-        else:
-            print(f"❌ Failed to download: {response.status_code} {response.reason}")
-
-    def create_repo(self, name, private=False, description=""):
-        url = f"{self.base_url}/user/repos"
-        data = {"name": name, "private": private, "description": description, "auto_init": True}
-        response = requests.post(url, json=data, headers=self.headers)
-        if response.status_code == 201:
-            print(f"✅ Repository '{name}' created successfully! (Private: {private})")
-            print(f"   URL: {response.json()['html_url']}")
-        else:
-            print(f"❌ Failed to create repo: {response.json().get('message')}")
-
-    def view_repo(self, name):
-        url = f"{self.base_url}/repos/{self.user}/{name}"
-        response = requests.get(url, headers=self.headers)
-        if response.status_code == 200:
-            repo = response.json()
-            print(f"\n📦 Repository: {repo['name']}")
-            print(f"   Description: {repo['description']}")
-            print(f"   Private: {repo['private']}")
-            print(f"   Stars: {repo['stargazers_count']}")
-            print(f"   URL: {repo['html_url']}")
-            print(f"   Clone: {repo['clone_url']}")
-            print(f"   Open Issues: {repo['open_issues_count']}")
-            print(f"   Default Branch: {repo['default_branch']}")
-            print(f"   Last Updated: {repo['updated_at']}\n")
-        else:
-            print(f"❌ Repository not found or access denied.")
-
-    def delete_repo(self, name):
-        confirmation = input(f"⚠️  Are you sure you want to DELETE '{self.user}/{name}'? This cannot be undone! (type 'yes'): ")
-        if confirmation.lower() != 'yes':
-            print("Operation cancelled.")
-            return
-        url = f"{self.base_url}/repos/{self.user}/{name}"
-        response = requests.delete(url, headers=self.headers)
-        if response.status_code == 204:
-            print(f"🗑️  Repository '{name}' deleted successfully.")
-        else:
-            print(f"❌ Failed to delete repo: {response.json().get('message')}")
-
-    def set_visibility(self, name, private):
-        url = f"{self.base_url}/repos/{self.user}/{name}"
-        data = {"private": private}
-        response = requests.patch(url, json=data, headers=self.headers)
-        if response.status_code == 200:
-            state = "Private" if private else "Public"
-            print(f"🔒 Repository '{name}' is now {state}.")
-        else:
-            print(f"❌ Failed to update visibility: {response.json().get('message')}")
-
-    def get_file_sha(self, repo, path):
-        url = f"{self.base_url}/repos/{self.user}/{repo}/contents/{path}"
-        response = requests.get(url, headers=self.headers)
-        if response.status_code == 200:
-            return response.json()['sha']
-        return None
-
-    def upload_file(self, repo_name, local_path, target_path=None, commit_message=None):
-        if not os.path.isfile(local_path):
-            print(f"❌ Error: Local file '{local_path}' not found.")
-            return
-
-        filename = os.path.basename(local_path)
-        remote_path = target_path if target_path else filename
-        if target_path and not os.path.splitext(target_path)[1]: 
-             remote_path = f"{target_path}/{filename}".replace("//", "/")
-
+    def _get_current_user(self) -> str:
+        """Get the currently authenticated GitHub user"""
         try:
-            with open(local_path, "rb") as f:
-                content = base64.b64encode(f.read()).decode("utf-8")
-        except Exception as e:
-            print(f"❌ Error reading file: {e}")
-            return
-
-        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
-        sha = self.get_file_sha(repo_name, remote_path)
-        message = f"Update {filename}" if sha else f"Create {filename}"
-        if commit_message: message = commit_message
-        
-        data = {"message": message, "content": content}
-        if sha: data["sha"] = sha
-
-        response = requests.put(url, json=data, headers=self.headers)
-        if response.status_code in [200, 201]:
-            action = "Updated" if sha else "Uploaded"
-            print(f"✅ {action} '{local_path}' -> '{remote_path}'")
-        else:
-            print(f"❌ Failed to upload '{local_path}': {response.json().get('message')}")
-
-    def upload_folder(self, repo_name, local_folder, target_folder="", commit_message=None):
-        if not os.path.isdir(local_folder):
-            print(f"❌ Error: Local directory '{local_folder}' not found.")
-            return
-
-        IGNORE_DIRS = {'.git', '__pycache__', 'venv', 'env', '.idea', '.vscode', 'node_modules'}
-        IGNORE_FILES = {'.DS_Store'}
-
-        print(f"📂 Starting upload of folder '{local_folder}'...")
-        for root, dirs, files in os.walk(local_folder):
-            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
-            for file in files:
-                if file in IGNORE_FILES: continue
-                local_file_path = os.path.join(root, file)
-                if local_folder == ".": relative_path = os.path.relpath(local_file_path, local_folder)
-                else: relative_path = os.path.relpath(local_file_path, local_folder)
-                
-                if target_folder: remote_path = os.path.join(target_folder, relative_path).replace("\\", "/")
-                else: remote_path = relative_path.replace("\\", "/")
-                if remote_path.startswith('/'): remote_path = remote_path[1:]
-
-                self._upload_file_direct(repo_name, local_file_path, remote_path, commit_message)
-        print("🏁 Upload complete.")
-
-    def _upload_file_direct(self, repo_name, local_path, remote_path, commit_message=None):
-        try:
-            with open(local_path, "rb") as f:
-                content = base64.b64encode(f.read()).decode("utf-8")
-        except Exception as e:
-            print(f"❌ Error reading file: {e}")
-            return
-        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
-        sha = self.get_file_sha(repo_name, remote_path)
-        filename = os.path.basename(local_path)
-        message = f"Update {filename}" if sha else f"Create {filename}"
-        if commit_message: message = commit_message
-        data = {"message": message, "content": content}
-        if sha: data["sha"] = sha
-        response = requests.put(url, json=data, headers=self.headers)
-        if response.status_code in [200, 201]:
-            action = "Updated" if sha else "Uploaded"
-            print(f"✅ {action} '{local_path}' -> '{remote_path}'")
-        else:
-            print(f"❌ Failed to upload '{local_path}': {response.json().get('message')}")
-
-    def get_repo_contents(self, repo_name, path=""):
-        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{path}"
-        response = requests.get(url, headers=self.headers)
-        if response.status_code == 200: return response.json()
-        return None
-
-    def delete_path(self, repo_name, remote_path, commit_message=None):
-        print(f"Attempting to delete: {remote_path} from {repo_name}")
-        contents = self.get_repo_contents(repo_name, remote_path)
-        if contents is None:
-            print(f"❌ Path '{remote_path}' not found in repo '{repo_name}'.")
-            return False
-        if isinstance(contents, list): 
-            print(f"📂 Deleting folder '{remote_path}' recursively...")
-            for item in contents:
-                item_path = item['path']
-                if not self.delete_path(repo_name, item_path, commit_message): return False
-            print(f"✅ Folder '{remote_path}' and its contents deleted successfully.")
-            return True
-        else: return self.delete_file(repo_name, remote_path, commit_message)
-
-    def delete_file(self, repo_name, remote_path, commit_message=None):
-        sha = self.get_file_sha(repo_name, remote_path)
-        if not sha: return False
-        url = f"{self.base_url}/repos/{self.user}/{repo_name}/contents/{remote_path}"
-        data = {"message": f"Delete {remote_path}", "sha": sha}
-        response = requests.delete(url, json=data, headers=self.headers)
-        if response.status_code == 200:
-            print(f"🗑️  File '{remote_path}' deleted successfully.")
-            return True
-        else:
-            print(f"❌ Failed to delete file '{remote_path}': {response.json().get('message')}")
-            return False
-
-def save_token_globally(token):
-    """Identifies the OS and saves the token permanently."""
-    os_type = platform.system()
-    
-    # Update current session immediately
-    os.environ["GITHUB_TOKEN"] = token
-    print("🔑 Setting up your token...")
-
-    if os_type == "Windows":
-        try:
-            # Use setx for persistent storage on Windows
-            subprocess.run(["setx", "GITHUB_TOKEN", token], check=True, shell=True, stdout=subprocess.DEVNULL)
-            print("✅ Token saved to Windows Environment Variables.")
-        except Exception as e:
-            print(f"❌ Failed to save token on Windows: {e}")
-
-    else: # Linux, Darwin (macOS), or Termux (Android)
-        shell = os.environ.get("SHELL", "/bin/bash")
-        config_file = os.path.expanduser("~/.bashrc") # Default for Termux
-        
-        if "zsh" in shell:
-            config_file = os.path.expanduser("~/.zshrc")
-        elif "bash" in shell:
-            config_file = os.path.expanduser("~/.bashrc")
-        
-        # Check if file exists, if not, try .profile
-        if not os.path.exists(config_file):
-            if os.path.exists(os.path.expanduser("~/.profile")):
-                config_file = os.path.expanduser("~/.profile")
+            response = self._make_request('GET', f"{self.base_url}/user", timeout=10)
+            if response.status_code == 200:
+                return response.json()['login']
+            elif response.status_code == 401:
+                print_error("Invalid GitHub token. Please check your token and try again.")
+                print_info("Create a token at: https://github.com/settings/tokens")
             else:
-                # Fallback to .bashrc even if it doesn't exist, we will create it
-                config_file = os.path.expanduser("~/.bashrc")
-
-        try:
-            with open(config_file, "a") as f:
-                f.write(f'\nexport GITHUB_TOKEN="{token}"\n')
-            print(f"✅ Token appended to '{config_file}'.")
-            print("⚠️  IMPORTANT: Please restart your terminal or run:")
-            print(f"   source {config_file}")
-        except Exception as e:
-            print(f"❌ Failed to save token to {config_file}: {e}")
-
-def main():
-    parser = argparse.ArgumentParser(description="GitHub CLI Manager", epilog=f"Version: {__version__}")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("--token", help="GitHub Personal Access Token (Temporary)")
-    
-    # Global flag for setting token
-    parser.add_argument("--set-token", help="Set the GITHUB_TOKEN permanently in your system", type=str)
-
-    subparsers = parser.add_subparsers(dest="command", required=False)
-    check_account_parser = parser.add_argument_group("Global Commands")
-    check_account_parser.add_argument("--check-account", action="store_true", help="Show the connected GitHub account")
-
-    # Command Definitions
-    create_parser = subparsers.add_parser("create", help="Create a new repository")
-    create_parser.add_argument("name", help="Name of the repository")
-    create_parser.add_argument("--private", action="store_true", help="Make repository private")
-    create_parser.add_argument("--desc", default="", help="Description of the repository")
-
-    view_parser = subparsers.add_parser("view", help="View repository details")
-    view_parser.add_argument("name", help="Name of the repository")
-
-    rename_parser = subparsers.add_parser("rename", help="Rename a repository")
-    rename_parser.add_argument("old_name", help="Current name")
-    rename_parser.add_argument("new_name", help="New name")
-
-    ls_parser = subparsers.add_parser("ls", help="List files/folders")
-    ls_parser.add_argument("name", help="Repo name")
-    ls_parser.add_argument("limit", nargs='?', default=100, type=int)
-    ls_parser.add_argument("--fi", action="store_true")
-    ls_parser.add_argument("--fo", action="store_true")
-    ls_parser.add_argument("--path", default="")
-
-    issues_parser = subparsers.add_parser("issues", help="Get open issues")
-    issues_parser.add_argument("name", help="Repo name")
-
-    pull_parser = subparsers.add_parser("pull", help="Download repo")
-    pull_parser.add_argument("name", help="Repo name")
-    pull_parser.add_argument("--dest", default=".")
-
-    delete_parser = subparsers.add_parser("delete", help="Delete repo")
-    delete_parser.add_argument("name", help="Repo name")
-
-    vis_parser = subparsers.add_parser("visibility", help="Change visibility")
-    vis_parser.add_argument("name", help="Repo name")
-    vis_parser.add_argument("--public", action="store_true")
-    vis_parser.add_argument("--private", action="store_true")
-
-    upload_parser = subparsers.add_parser("upload", help="Upload files")
-    upload_parser.add_argument("repo", help="Target repo")
-    upload_parser.add_argument("path", default=".", nargs="?")
-    upload_parser.add_argument("-m", "--message")
-    upload_parser.add_argument("--target")
-
-    rm_parser = subparsers.add_parser("rm", help="Delete file/folder")
-    rm_parser.add_argument("repo", help="Target repo")
-    rm_parser.add_argument("path", help="Path to delete")
-
-    args = parser.parse_args()
-
-    # --- HANDLE TOKEN SETUP ---
-    if args.set_token:
-        save_token_globally(args.set_token)
-        # Use the new token immediately for verification
-        token = args.set_token
-    else:
-        # Load normally
-        token = args.token or os.environ.get("GITHUB_TOKEN")
-
-    if not token:
-        print("❌ Error: GitHub Token is required. Use --set-token to save it once, or --token for temp access.")
+                print_error(f"Failed to authenticate: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
         sys.exit(1)
 
-    gh = GitHubManager(token)
+    def _make_request(self, method: str, url: str, max_retries: int = 3, **kwargs) -> requests.Response:
+        """Make HTTP request with retry logic"""
+        for attempt in range(max_retries):
+            try:
+                response = requests.request(method, url, headers=self.headers, **kwargs)
+                return response
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    print_warning(f"Request failed, retrying in {wait_time}s... ({attempt + 1}/{max_retries})")
+                    time.sleep(wait_time)
+                else:
+                    raise
 
-    # If setting token or checking account, show user
-    if args.check_account or args.set_token:
-        print(f"✅ Connected as: {gh.user}")
+    def _parse_repo(self, repo_input: str) -> Tuple[str, str]:
+        """Parse repository input (accepts 'owner/repo' or just 'repo')"""
+        if "/" in repo_input:
+            parts = repo_input.split("/", 1)
+            return parts[0], parts[1]
+        return self.user, repo_input
+
+    def _clean_path(self, path: str) -> str:
+        """Normalize file paths for GitHub API"""
+        if not path:
+            return ""
+        clean = path.replace("\\", "/").lstrip("/")
+        return clean
+
+    def _repo_exists(self, owner: str, repo: str) -> bool:
+        """Check if a repository exists and is accessible"""
+        try:
+            response = self._make_request('GET', f"{self.base_url}/repos/{owner}/{repo}", timeout=10)
+            return response.status_code == 200
+        except requests.exceptions.RequestException:
+            return False
+
+    def list_repositories(self, visibility: str = "all", sort: str = "updated", limit: int = 30):
+        """List all repositories for the authenticated user"""
+        print_info(f"Fetching your repositories ({visibility})...")
+        
+        try:
+            params = {"visibility": visibility, "sort": sort, "per_page": limit}
+            response = self._make_request('GET', f"{self.base_url}/user/repos", params=params, timeout=10)
+            
+            if response.status_code != 200:
+                print_error(f"Failed to fetch repositories: {response.json().get('message', 'Unknown error')}")
+                return
+
+            repos = response.json()
+            
+            if not repos:
+                print_info("No repositories found")
+                return
+
+            print(f"\n{Colors.BOLD}📚 Your Repositories ({len(repos)}){Colors.RESET}")
+            print("─" * 80)
+            
+            for repo in repos:
+                visibility_icon = "🔒" if repo['private'] else "🌍"
+                stars = f"⭐{repo['stargazers_count']}" if repo['stargazers_count'] > 0 else ""
+                language = f"[{repo['language']}]" if repo['language'] else ""
+                
+                print(f"{visibility_icon} {Colors.BOLD}{repo['name']}{Colors.RESET} {language} {stars}")
+                if repo['description']:
+                    print(f"   {Colors.DIM}{repo['description'][:70]}{Colors.RESET}")
+                print(f"   {Colors.CYAN}{repo['html_url']}{Colors.RESET}")
+                print()
+            
+            print("─" * 80)
+            
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def read_file(self, repo_input: str, file_path: str, show_raw: bool = False):
+        """Read and display file contents from repository"""
+        owner, repo = self._parse_repo(repo_input)
+        file_path = self._clean_path(file_path)
+        
+        print_info(f"Reading '{file_path}' from {owner}/{repo}...")
+        
+        try:
+            response = self._make_request(
+                'GET',
+                f"{self.base_url}/repos/{owner}/{repo}/contents/{file_path}",
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                print_error(f"File not found or access denied")
+                return
+
+            data = response.json()
+            
+            if isinstance(data, list):
+                print_error(f"'{file_path}' is a directory, not a file")
+                return
+            
+            if 'content' not in data:
+                print_error("Unable to read file content")
+                return
+            
+            # Decode base64 content
+            content = base64.b64decode(data['content']).decode('utf-8')
+            
+            if show_raw:
+                print(content)
+            else:
+                print(f"\n{Colors.BOLD}📄 {file_path}{Colors.RESET}")
+                print(f"{Colors.DIM}Size: {data['size']} bytes | SHA: {data['sha'][:7]}{Colors.RESET}")
+                print("─" * 80)
+                print(content)
+                print("─" * 80 + "\n")
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+        except Exception as e:
+            print_error(f"Error reading file: {e}")
+
+    def rename_repository(self, old_name: str, new_name: str):
+        """Rename a repository"""
+        owner, repo = self._parse_repo(old_name)
+        
+        print_info(f"Renaming '{repo}' to '{new_name}'...")
+        
+        try:
+            response = self._make_request(
+                'PATCH',
+                f"{self.base_url}/repos/{owner}/{repo}",
+                json={"name": new_name},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                print_success(f"Repository renamed successfully!")
+                print_info(f"New URL: {data['html_url']}")
+            else:
+                error_msg = response.json().get('message', 'Unknown error')
+                print_error(f"Failed to rename repository: {error_msg}")
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def update_repository(self, repo_input: str, description: str = None, 
+                         private: bool = None, homepage: str = None):
+        """Update repository settings"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        updates = {}
+        if description is not None:
+            updates['description'] = description
+        if private is not None:
+            updates['private'] = private
+        if homepage is not None:
+            updates['homepage'] = homepage
+        
+        if not updates:
+            print_warning("No updates specified")
+            return
+        
+        print_info(f"Updating repository '{owner}/{repo}'...")
+        
+        try:
+            response = self._make_request(
+                'PATCH',
+                f"{self.base_url}/repos/{owner}/{repo}",
+                json=updates,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                print_success("Repository updated successfully!")
+                if description:
+                    print_info(f"Description: {description}")
+                if private is not None:
+                    print_info(f"Visibility: {'Private' if private else 'Public'}")
+                if homepage:
+                    print_info(f"Homepage: {homepage}")
+            else:
+                error_msg = response.json().get('message', 'Unknown error')
+                print_error(f"Failed to update repository: {error_msg}")
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def list_branches(self, repo_input: str):
+        """List all branches in a repository"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        print_info(f"Fetching branches for '{owner}/{repo}'...")
+        
+        try:
+            response = self._make_request(
+                'GET',
+                f"{self.base_url}/repos/{owner}/{repo}/branches",
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                print_error(f"Failed to fetch branches: {response.json().get('message', 'Unknown error')}")
+                return
+
+            branches = response.json()
+            
+            if not branches:
+                print_info("No branches found")
+                return
+
+            # Get default branch
+            repo_response = self._make_request(
+                'GET',
+                f"{self.base_url}/repos/{owner}/{repo}",
+                timeout=10
+            )
+            default_branch = repo_response.json().get('default_branch', 'main') if repo_response.status_code == 200 else 'main'
+
+            print(f"\n{Colors.BOLD}🌲 Branches for {owner}/{repo}{Colors.RESET}")
+            print("─" * 60)
+            
+            for branch in branches:
+                is_default = branch['name'] == default_branch
+                prefix = f"{Colors.GREEN}➜{Colors.RESET}" if is_default else " "
+                default_tag = f"{Colors.YELLOW}(default){Colors.RESET}" if is_default else ""
+                print(f"{prefix} {branch['name']} {default_tag}")
+            
+            print("─" * 60)
+            print(f"Total: {len(branches)} branch(es)\n")
+            
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def repo_stats(self, repo_input: str):
+        """Show detailed repository statistics"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        print_info(f"Fetching statistics for '{owner}/{repo}'...")
+        
+        try:
+            response = self._make_request('GET', f"{self.base_url}/repos/{owner}/{repo}", timeout=10)
+            
+            if response.status_code != 200:
+                print_error("Repository not found or access denied")
+                return
+
+            data = response.json()
+            
+            # Calculate repository size in MB
+            size_mb = data['size'] / 1024
+            
+            print(f"\n{Colors.BOLD}📊 Statistics for {data['full_name']}{Colors.RESET}")
+            print("─" * 70)
+            print(f"  {Colors.BOLD}General:{Colors.RESET}")
+            print(f"    Description:  {data['description'] or 'No description'}")
+            print(f"    Visibility:   {'🔒 Private' if data['private'] else '🌍 Public'}")
+            print(f"    Created:      {data['created_at'][:10]}")
+            print(f"    Updated:      {data['updated_at'][:10]}")
+            print(f"    Size:         {size_mb:.2f} MB")
+            print(f"    Language:     {data['language'] or 'N/A'}")
+            
+            print(f"\n  {Colors.BOLD}Engagement:{Colors.RESET}")
+            print(f"    ⭐ Stars:      {data['stargazers_count']}")
+            print(f"    👁  Watchers:   {data['watchers_count']}")
+            print(f"    🔱 Forks:      {data['forks_count']}")
+            print(f"    ⚠  Issues:     {data['open_issues_count']}")
+            
+            print(f"\n  {Colors.BOLD}Branches:{Colors.RESET}")
+            print(f"    Default:      {data['default_branch']}")
+            
+            if data['homepage']:
+                print(f"\n  {Colors.BOLD}Links:{Colors.RESET}")
+                print(f"    Homepage:     {data['homepage']}")
+            
+            print(f"\n  {Colors.BOLD}URLs:{Colors.RESET}")
+            print(f"    Web:          {data['html_url']}")
+            print(f"    Clone:        {data['clone_url']}")
+            print("─" * 70 + "\n")
+            
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def list_files(self, repo_input: str, path: str = "", limit: int = 100, 
+                   files_only: bool = False, folders_only: bool = False):
+        """List repository contents with smart formatting"""
+        owner, repo = self._parse_repo(repo_input)
+        path = self._clean_path(path)
+        
+        print_info(f"Listing contents of '{owner}/{repo}/{path}'...")
+        
+        try:
+            response = self._make_request(
+                'GET',
+                f"{self.base_url}/repos/{owner}/{repo}/contents/{path}",
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                print_error(f"Failed to list contents: {response.json().get('message', 'Unknown error')}")
+                return
+
+            items = response.json()
+            if not isinstance(items, list):
+                items = [items]
+
+            # Sort: folders first, then alphabetically
+            items.sort(key=lambda x: (x['type'] != 'dir', x['name'].lower()))
+
+            print(f"\n{Colors.BOLD}📂 {owner}/{repo}/{path}{Colors.RESET}")
+            print("─" * 60)
+            
+            count = 0
+            for item in items[:limit]:
+                item_type = item['type']
+                name = item['name']
+                
+                # Apply filters
+                if files_only and item_type != "file":
+                    continue
+                if folders_only and item_type != "dir":
+                    continue
+                
+                icon = "📁" if item_type == "dir" else "📄"
+                suffix = "/" if item_type == "dir" else ""
+                print(f"  {icon} {name}{suffix}")
+                count += 1
+            
+            if count == 0:
+                print("  (No items found)")
+            print("─" * 60 + "\n")
+            
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def create_repository(self, name: str, private: bool = False, description: str = ""):
+        """Create a new GitHub repository"""
+        print_info(f"Creating repository '{name}'...")
+        
+        data = {
+            "name": name,
+            "private": private,
+            "description": description,
+            "auto_init": True
+        }
+        
+        try:
+            response = self._make_request(
+                'POST',
+                f"{self.base_url}/user/repos",
+                json=data,
+                timeout=10
+            )
+            
+            if response.status_code == 201:
+                repo_data = response.json()
+                print_success(f"Repository '{name}' created!")
+                print_info(f"URL: {repo_data['html_url']}")
+                print_info(f"Clone: git clone {repo_data['clone_url']}")
+            else:
+                error_msg = response.json().get('message', 'Unknown error')
+                print_error(f"Failed to create repository: {error_msg}")
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def show_repository(self, repo_input: str):
+        """Display repository information"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        try:
+            response = self._make_request('GET', f"{self.base_url}/repos/{owner}/{repo}", timeout=10)
+            
+            if response.status_code != 200:
+                print_error("Repository not found or access denied")
+                return
+
+            data = response.json()
+            print(f"\n{Colors.BOLD}📦 {data['full_name']}{Colors.RESET}")
+            print("─" * 60)
+            print(f"  Description:  {data['description'] or 'No description'}")
+            print(f"  Visibility:   {'🔒 Private' if data['private'] else '🌍 Public'}")
+            print(f"  Stars:        ⭐ {data['stargazers_count']}")
+            print(f"  Forks:        🔱 {data['forks_count']}")
+            print(f"  Language:     {data['language'] or 'N/A'}")
+            print(f"  URL:          {data['html_url']}")
+            print(f"  Clone:        git clone {data['clone_url']}")
+            print("─" * 60 + "\n")
+            
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def delete_repository(self, repo_input: str, force: bool = False):
+        """Delete a GitHub repository"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        if not force:
+            print_warning(f"You are about to DELETE '{owner}/{repo}' permanently!")
+            confirm = input("Type the repository name to confirm: ").strip()
+            if confirm != repo:
+                print_info("Deletion cancelled")
+                return
+        
+        try:
+            response = self._make_request('DELETE', f"{self.base_url}/repos/{owner}/{repo}", timeout=10)
+            
+            if response.status_code == 204:
+                print_success(f"Repository '{repo}' deleted")
+            else:
+                error_msg = response.json().get('message', 'Unknown error')
+                print_error(f"Failed to delete repository: {error_msg}")
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+
+    def _get_file_sha(self, owner: str, repo: str, path: str) -> Optional[str]:
+        """Get the SHA hash of a file (needed for updates)"""
+        path = self._clean_path(path)
+        try:
+            response = self._make_request(
+                'GET',
+                f"{self.base_url}/repos/{owner}/{repo}/contents/{path}",
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                # Files return a dict with 'sha', folders return a list
+                if isinstance(data, dict) and 'sha' in data:
+                    return data['sha']
+        except requests.exceptions.RequestException:
+            pass
+        return None
+
+    def upload_file(self, repo_input: str, local_path: str, 
+                   remote_path: Optional[str] = None, message: Optional[str] = None):
+        """Upload a single file to repository"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        if not self._repo_exists(owner, repo):
+            print_error(f"Repository '{owner}/{repo}' not found")
+            return
+        
+        if not os.path.isfile(local_path):
+            print_error(f"Local file '{local_path}' not found")
+            return
+        
+        filename = os.path.basename(local_path)
+        target = remote_path if remote_path else filename
+        
+        # If remote_path is a directory, append filename
+        if remote_path and not os.path.splitext(remote_path)[1]:
+            target = f"{remote_path}/{filename}"
+        
+        self._upload_single_file(owner, repo, local_path, target, message)
+
+    def upload_folder(self, repo_input: str, local_folder: str, 
+                     remote_folder: str = "", message: Optional[str] = None):
+        """Upload entire folder to repository"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        if not self._repo_exists(owner, repo):
+            print_error(f"Repository '{owner}/{repo}' not found")
+            return
+        
+        if not os.path.isdir(local_folder):
+            print_error(f"Local folder '{local_folder}' not found")
+            return
+        
+        print_info(f"Uploading folder '{local_folder}' to {owner}/{repo}...")
+        
+        # Folders/files to ignore
+        IGNORE = {'.git', '__pycache__', 'venv', 'env', '.idea', 
+                  '.vscode', 'node_modules', '.DS_Store', '.gitignore'}
+        
+        uploaded = 0
+        failed = 0
+        
+        for root, dirs, files in os.walk(local_folder):
+            # Filter out ignored directories
+            dirs[:] = [d for d in dirs if d not in IGNORE]
+            
+            for file in files:
+                if file in IGNORE:
+                    continue
+                    
+                local_file = os.path.join(root, file)
+                relative = os.path.relpath(local_file, local_folder)
+                remote = os.path.join(remote_folder, relative) if remote_folder else relative
+                
+                success = self._upload_single_file(owner, repo, local_file, remote, message)
+                if success:
+                    uploaded += 1
+                else:
+                    failed += 1
+        
+        if failed > 0:
+            print_warning(f"Upload complete! ({uploaded} succeeded, {failed} failed)")
+        else:
+            print_success(f"Upload complete! ({uploaded} files)")
+
+    def _upload_single_file(self, owner: str, repo: str, local_path: str,
+                           remote_path: str, message: Optional[str]) -> bool:
+        """Internal method to upload a single file"""
+        remote_path = self._clean_path(remote_path)
+        
+        try:
+            # Check file size (GitHub has a 100MB limit)
+            file_size = os.path.getsize(local_path)
+            if file_size > 100 * 1024 * 1024:  # 100MB
+                print_error(f"File too large (>100MB): {local_path}")
+                return False
+            
+            with open(local_path, "rb") as f:
+                content = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            print_error(f"Failed to read '{local_path}': {e}")
+            return False
+        
+        sha = self._get_file_sha(owner, repo, remote_path)
+        filename = os.path.basename(local_path)
+        
+        commit_msg = message if message else (
+            f"Update {filename}" if sha else f"Add {filename}"
+        )
+        
+        data = {"message": commit_msg, "content": content}
+        if sha:
+            data["sha"] = sha
+        
+        try:
+            response = self._make_request(
+                'PUT',
+                f"{self.base_url}/repos/{owner}/{repo}/contents/{remote_path}",
+                json=data,
+                timeout=30
+            )
+            
+            if response.status_code in [200, 201]:
+                action = "Updated" if sha else "Added"
+                print_success(f"{action}: {remote_path}")
+                return True
+            else:
+                error_msg = response.json().get('message', 'Unknown error')
+                print_error(f"Failed to upload '{filename}': {error_msg}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Upload error: {e}")
+            return False
+
+    def delete_path(self, repo_input: str, remote_path: str, 
+                   message: Optional[str] = None, force: bool = False):
+        """Delete a file or folder from repository"""
+        owner, repo = self._parse_repo(repo_input)
+        remote_path = self._clean_path(remote_path)
+        
+        if not self._repo_exists(owner, repo):
+            print_error(f"Repository '{owner}/{repo}' not found")
+            return False
+        
+        if not force:
+            print_warning(f"Delete '{remote_path}' from {owner}/{repo}?")
+            confirm = input("Type 'yes' to confirm: ").strip().lower()
+            if confirm != 'yes':
+                print_info("Deletion cancelled")
+                return False
+        
+        print_info(f"Deleting '{remote_path}'...")
+        
+        # Try as file first
+        sha = self._get_file_sha(owner, repo, remote_path)
+        if sha:
+            return self._delete_file(owner, repo, remote_path, sha, message)
+        
+        # Try as folder
+        try:
+            response = self._make_request(
+                'GET',
+                f"{self.base_url}/repos/{owner}/{repo}/contents/{remote_path}",
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                contents = response.json()
+                if isinstance(contents, list):
+                    print_info("Deleting folder recursively...")
+                    deleted_count = 0
+                    for item in contents:
+                        # Validate item structure
+                        if isinstance(item, dict) and 'path' in item:
+                            self.delete_path(repo_input, item['path'], message, force=True)
+                            deleted_count += 1
+                        else:
+                            print_warning(f"Skipping invalid item: {item}")
+                    
+                    if deleted_count > 0:
+                        print_success(f"Folder '{remote_path}' deleted ({deleted_count} items)")
+                    else:
+                        print_info(f"Folder '{remote_path}' was empty")
+                    return True
+        except requests.exceptions.RequestException as e:
+            print_error(f"Connection error: {e}")
+            return False
+        except (KeyError, TypeError) as e:
+            print_error(f"Invalid response format: {e}")
+            return False
+        
+        print_error(f"Path '{remote_path}' not found")
+        return False
+
+    def _delete_file(self, owner: str, repo: str, path: str, 
+                    sha: str, message: Optional[str]) -> bool:
+        """Internal method to delete a single file"""
+        commit_msg = message if message else f"Delete {os.path.basename(path)}"
+        data = {"message": commit_msg, "sha": sha}
+        
+        try:
+            response = self._make_request(
+                'DELETE',
+                f"{self.base_url}/repos/{owner}/{repo}/contents/{path}",
+                json=data,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                print_success(f"Deleted: {path}")
+                return True
+            else:
+                error_msg = response.json().get('message', 'Unknown error')
+                print_error(f"Failed to delete: {error_msg}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Delete error: {e}")
+            return False
+
+    def download_repo(self, repo_input: str, destination: str = ".", branch: str = "main"):
+        """Download and extract a repository"""
+        owner, repo = self._parse_repo(repo_input)
+        
+        print_info(f"Downloading '{owner}/{repo}' (branch: {branch})...")
+        
+        try:
+            response = self._make_request(
+                'GET',
+                f"{self.base_url}/repos/{owner}/{repo}/zipball/{branch}",
+                stream=True,
+                timeout=30
+            )
+            
+            if response.status_code == 404:
+                # Try 'master' as fallback
+                print_warning(f"Branch '{branch}' not found, trying 'master'...")
+                response = self._make_request(
+                    'GET',
+                    f"{self.base_url}/repos/{owner}/{repo}/zipball/master",
+                    stream=True,
+                    timeout=30
+                )
+            
+            if response.status_code != 200:
+                print_error(f"Failed to download repository: Status {response.status_code}")
+                return
+            
+            # Extract ZIP
+            z = zipfile.ZipFile(io.BytesIO(response.content))
+            
+            # GitHub zips have a top-level directory, so we extract without it
+            for member in z.infolist():
+                parts = member.filename.split('/', 1)
+                if len(parts) > 1:
+                    member.filename = parts[1]
+                    if member.filename:  # Skip if empty
+                        z.extract(member, path=destination)
+            
+            dest_abs = os.path.abspath(destination)
+            print_success(f"Downloaded to: {dest_abs}")
+            
+        except requests.exceptions.RequestException as e:
+            print_error(f"Download error: {e}")
+        except zipfile.BadZipFile:
+            print_error("Failed to extract: Invalid ZIP file")
+
+
+def setup_token(token: str, scope: str = "user"):
+    """Set GitHub token as environment variable (Windows only)"""
+    try:
+        import winreg
+        
+        if scope == "system":
+            key = winreg.CreateKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+            )
+            print_warning("System-level requires admin privileges and system restart")
+        else:
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, 'Environment')
+        
+        winreg.SetValueEx(key, "GITHUB_TOKEN", 0, winreg.REG_SZ, token)
+        winreg.CloseKey(key)
+        
+        print_success(f"Token saved to {scope} environment")
+        print_info("Restart your terminal to apply changes")
+        
+    except ImportError:
+        print_error("This feature is Windows-only")
+        print_info("Set GITHUB_TOKEN manually in your system environment")
+    except Exception as e:
+        print_error(f"Failed to set token: {e}")
+
+
+def show_examples():
+    """Show usage examples"""
+    examples = f"""
+{Colors.BOLD}Sora - GitHub Repository Manager{Colors.RESET}
+{Colors.BOLD}Usage Examples:{Colors.RESET}
+
+{Colors.BLUE}Authentication:{Colors.RESET}
+  sora --token YOUR_TOKEN --check-account          Check current user
+  sora --set-token YOUR_TOKEN                      Save token (Windows)
+
+{Colors.BLUE}Repository Management:{Colors.RESET}
+  sora repos                                       List all your repos
+  sora repos --visibility public                   List only public repos
+  sora create my-project                           Create new repo
+  sora create my-app --private --desc "My app"     Create private repo
+  sora view my-repo                                Show repo info
+  sora stats my-repo                               Show detailed stats
+  sora rename old-name new-name                    Rename repository
+  sora update my-repo --desc "New description"     Update repo settings
+  sora delete old-repo                             Delete repo
+
+{Colors.BLUE}Branch Management:{Colors.RESET}
+  sora branches my-repo                            List all branches
+
+{Colors.BLUE}File Operations:{Colors.RESET}
+  sora ls my-repo                                  List files
+  sora ls my-repo --path src                       List files in folder
+  sora ls my-repo --files-only                     Show only files
+  sora cat my-repo README.md                       Read file contents
+  sora cat my-repo src/app.py --raw              Raw output (no formatting)
+
+{Colors.BLUE}Upload/Download:{Colors.RESET}
+  sora push my-repo ./file.txt                     Upload file
+  sora push my-repo ./folder                       Upload folder
+  sora push my-repo ./app.py --target src/         Upload to specific path
+  sora pull my-repo                                Download repo
+  sora pull owner/repo --dest ./downloads          Download to folder
+
+{Colors.BLUE}Delete Files:{Colors.RESET}
+  sora rm my-repo path/to/file.txt                 Delete file
+  sora rm my-repo old-folder --force               Delete folder (no confirm)
+
+{Colors.BLUE}Options:{Colors.RESET}
+  -m "message"    Custom commit message
+  --force         Skip confirmation prompts
+  --branch NAME   Specify branch (default: main)
+
+{Colors.BLUE}Environment:{Colors.RESET}
+  Set GITHUB_TOKEN environment variable to avoid --token flag
+  Create token at: https://github.com/settings/tokens
+"""
+    print(examples)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Sora - Enhanced GitHub Repository Manager",
+        epilog=f"Version {__version__} | Use 'sora --examples' for usage examples",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    
+    # Global options
+    parser.add_argument("--version", action="version", version=f"Sora {__version__}")
+    parser.add_argument("--token", help="GitHub Personal Access Token")
+    parser.add_argument("--check-account", action="store_true", help="Show connected GitHub account")
+    parser.add_argument("--set-token", help="Save token as environment variable (Windows)")
+    parser.add_argument("--scope", choices=["user", "system"], default="user", help="Token scope (default: user)")
+    parser.add_argument("--examples", action="store_true", help="Show usage examples")
+    
+    # Subcommands
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    
+    # List repositories
+    repos = subparsers.add_parser("repos", aliases=["list"], help="List all repositories")
+    repos.add_argument("--visibility", choices=["all", "public", "private"], default="all", help="Filter by visibility")
+    repos.add_argument("--sort", choices=["created", "updated", "pushed", "full_name"], default="updated", help="Sort order")
+    repos.add_argument("--limit", type=int, default=30, help="Max repositories to show")
+    
+    # Read file
+    cat = subparsers.add_parser("cat", aliases=["read"], help="Read file contents")
+    cat.add_argument("name", help="Repository name")
+    cat.add_argument("file", help="File path to read")
+    cat.add_argument("--raw", action="store_true", help="Show raw output without formatting")
+    
+    # Rename repository
+    rename = subparsers.add_parser("rename", aliases=["mv"], help="Rename repository")
+    rename.add_argument("old_name", help="Current repository name")
+    rename.add_argument("new_name", help="New repository name")
+    
+    # Update repository
+    update = subparsers.add_parser("update", help="Update repository settings")
+    update.add_argument("name", help="Repository name")
+    update.add_argument("--desc", help="New description")
+    update.add_argument("--private", action="store_true", help="Make repository private")
+    update.add_argument("--public", action="store_true", help="Make repository public")
+    update.add_argument("--homepage", help="Set homepage URL")
+    
+    # List branches
+    branches = subparsers.add_parser("branches", help="List repository branches")
+    branches.add_argument("name", help="Repository name")
+    
+    # Repository stats
+    stats = subparsers.add_parser("stats", aliases=["info"], help="Show detailed repository statistics")
+    stats.add_argument("name", help="Repository name")
+    
+    # Create repository
+    create = subparsers.add_parser("create", help="Create new repository")
+    create.add_argument("name", help="Repository name")
+    create.add_argument("--private", action="store_true", help="Make repository private")
+    create.add_argument("--desc", default="", help="Repository description")
+    
+    # View repository
+    view = subparsers.add_parser("view", help="Show repository information")
+    view.add_argument("name", help="Repository name (owner/repo or repo)")
+    
+    # List files
+    ls = subparsers.add_parser("ls", help="List repository contents")
+    ls.add_argument("name", help="Repository name")
+    ls.add_argument("--path", default="", help="Path to list")
+    ls.add_argument("--limit", type=int, default=100, help="Max items to show")
+    ls.add_argument("--files-only", action="store_true", help="Show only files")
+    ls.add_argument("--folders-only", action="store_true", help="Show only folders")
+    
+    # Upload (push)
+    push = subparsers.add_parser("push", aliases=["upload"], help="Upload file or folder")
+    push.add_argument("repo", help="Repository name")
+    push.add_argument("path", default=".", nargs="?", help="Local path to upload")
+    push.add_argument("--target", help="Remote target path")
+    push.add_argument("-m", "--message", help="Commit message")
+    
+    # Remove
+    rm = subparsers.add_parser("rm", aliases=["remove", "del"], help="Delete file or folder")
+    rm.add_argument("repo", help="Repository name")
+    rm.add_argument("path", help="Remote path to delete")
+    rm.add_argument("-m", "--message", help="Commit message")
+    rm.add_argument("--force", action="store_true", help="Skip confirmation")
+    
+    # Delete repository
+    delete = subparsers.add_parser("delete", help="Delete repository")
+    delete.add_argument("name", help="Repository name")
+    delete.add_argument("--force", action="store_true", help="Skip confirmation")
+    
+    # Download (pull)
+    pull = subparsers.add_parser("pull", aliases=["download", "clone"], help="Download repository")
+    pull.add_argument("name", help="Repository name (owner/repo or repo)")
+    pull.add_argument("--dest", default=".", help="Destination folder")
+    pull.add_argument("--branch", default="main", help="Branch name (default: main)")
+    
+    args = parser.parse_args()
+    
+    # Show examples
+    if args.examples:
+        show_examples()
         return
-
-    if args.command is None:
+    
+    # Set token
+    if args.set_token:
+        setup_token(args.set_token, args.scope)
+        return
+    
+    # Get token
+    token = args.token or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print_error("GitHub token required!")
+        print_info("Use: sora --token YOUR_TOKEN")
+        print_info("Or set GITHUB_TOKEN environment variable")
+        print_info("Create token at: https://github.com/settings/tokens")
+        sys.exit(1)
+    
+    # Initialize manager
+    try:
+        gh = GitHubManager(token)
+    except SystemExit:
+        sys.exit(1)
+    
+    # Check account
+    if args.check_account:
+        print_success(f"Connected as: {gh.user}")
+        return
+    
+    # Handle commands
+    if not args.command:
         parser.print_help()
+        print(f"\n{Colors.BLUE}Tip:{Colors.RESET} Use 'sora --examples' for usage examples")
+        return
+    
+    try:
+        if args.command in ["repos", "list"]:
+            gh.list_repositories(args.visibility, args.sort, args.limit)
+        
+        elif args.command in ["cat", "read"]:
+            gh.read_file(args.name, args.file, args.raw)
+        
+        elif args.command in ["rename", "mv"]:
+            gh.rename_repository(args.old_name, args.new_name)
+        
+        elif args.command == "update":
+            private = True if args.private else (False if args.public else None)
+            gh.update_repository(args.name, args.desc, private, args.homepage)
+        
+        elif args.command == "branches":
+            gh.list_branches(args.name)
+        
+        elif args.command in ["stats", "info"]:
+            gh.repo_stats(args.name)
+        
+        elif args.command == "create":
+            gh.create_repository(args.name, args.private, args.desc)
+        
+        elif args.command == "view":
+            gh.show_repository(args.name)
+        
+        elif args.command == "ls":
+            gh.list_files(
+                args.name, 
+                args.path, 
+                args.limit,
+                args.files_only,
+                args.folders_only
+            )
+        
+        elif args.command in ["push", "upload"]:
+            if os.path.isdir(args.path):
+                gh.upload_folder(args.repo, args.path, args.target or "", args.message)
+            else:
+                gh.upload_file(args.repo, args.path, args.target, args.message)
+        
+        elif args.command in ["rm", "remove", "del"]:
+            gh.delete_path(args.repo, args.path, args.message, args.force)
+        
+        elif args.command == "delete":
+            gh.delete_repository(args.name, args.force)
+        
+        elif args.command in ["pull", "download", "clone"]:
+            gh.download_repo(args.name, args.dest, args.branch)
+    
+    except KeyboardInterrupt:
+        print_info("\nOperation cancelled by user")
         sys.exit(0)
+    except Exception as e:
+        import traceback
+        print_error(f"Unexpected error: {e}")
+        print(f"\n{Colors.YELLOW}Debug traceback:{Colors.RESET}")
+        traceback.print_exc()
+        sys.exit(1)
 
-    # Execution logic
-    if args.command == "create": gh.create_repo(args.name, args.private, args.desc)
-    elif args.command == "view": gh.view_repo(args.name)
-    elif args.command == "rename": gh.rename_repo(args.old_name, args.new_name)
-    elif args.command == "ls":
-        mode = "all"
-        if args.fi: mode = "fi"
-        elif args.fo: mode = "fo"
-        gh.list_contents(args.name, args.limit, mode, args.path)
-    elif args.command == "issues": gh.get_issues(args.name)
-    elif args.command == "pull": gh.pull_repo(args.name, args.dest)
-    elif args.command == "delete": gh.delete_repo(args.name)
-    elif args.command == "visibility":
-        if args.public and args.private: print("❌ Error: Cannot set both flags.")
-        elif args.public: gh.set_visibility(args.name, False)
-        elif args.private: gh.set_visibility(args.name, True)
-    elif args.command == "upload":
-        target = getattr(args, 'target', '')
-        if args.path == ".": gh.upload_folder(args.repo, ".", target, args.message)
-        elif os.path.isfile(args.path): gh.upload_file(args.repo, args.path, target, args.message)
-        elif os.path.isdir(args.path): gh.upload_folder(args.repo, args.path, target, args.message)
-        else: print(f"❌ Error: Path '{args.path}' not found.")
-    elif args.command == "rm": gh.delete_path(args.repo, args.path)
 
 if __name__ == "__main__":
     main()
-
