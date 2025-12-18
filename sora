@@ -270,7 +270,7 @@ class GitHubManager:
                 print_info("No branches found")
                 return
 
-            # Get default branch
+        
             repo_response = self._make_request(
                 'GET',
                 f"{self.base_url}/repos/{owner}/{repo}",
@@ -485,7 +485,7 @@ class GitHubManager:
             )
             if response.status_code == 200:
                 data = response.json()
-                # Files return a dict with 'sha', folders return a list
+            
                 if isinstance(data, dict) and 'sha' in data:
                     return data['sha']
         except requests.exceptions.RequestException:
@@ -508,7 +508,7 @@ class GitHubManager:
         filename = os.path.basename(local_path)
         target = remote_path if remote_path else filename
         
-        # If remote_path is a directory, append filename
+
         if remote_path and not os.path.splitext(remote_path)[1]:
             target = f"{remote_path}/{filename}"
         
@@ -529,7 +529,7 @@ class GitHubManager:
         
         print_info(f"Uploading folder '{local_folder}' to {owner}/{repo}...")
         
-        # Folders/files to ignore
+        
         IGNORE = {'.git', '__pycache__', 'venv', 'env', '.idea', 
                   '.vscode', 'node_modules', '.DS_Store', '.gitignore'}
         
@@ -537,7 +537,7 @@ class GitHubManager:
         failed = 0
         
         for root, dirs, files in os.walk(local_folder):
-            # Filter out ignored directories
+            
             dirs[:] = [d for d in dirs if d not in IGNORE]
             
             for file in files:
@@ -565,7 +565,7 @@ class GitHubManager:
         remote_path = self._clean_path(remote_path)
         
         try:
-            # Check file size (GitHub has a 100MB limit)
+        
             file_size = os.path.getsize(local_path)
             if file_size > 100 * 1024 * 1024:  # 100MB
                 print_error(f"File too large (>100MB): {local_path}")
@@ -628,12 +628,12 @@ class GitHubManager:
         
         print_info(f"Deleting '{remote_path}'...")
         
-        # Try as file first
+        
         sha = self._get_file_sha(owner, repo, remote_path)
         if sha:
             return self._delete_file(owner, repo, remote_path, sha, message)
         
-        # Try as folder
+    
         try:
             response = self._make_request(
                 'GET',
@@ -710,7 +710,7 @@ class GitHubManager:
             )
             
             if response.status_code == 404:
-                # Try 'master' as fallback
+        
                 print_warning(f"Branch '{branch}' not found, trying 'master'...")
                 response = self._make_request(
                     'GET',
@@ -723,7 +723,7 @@ class GitHubManager:
                 print_error(f"Failed to download repository: Status {response.status_code}")
                 return
             
-            # Extract ZIP
+        
             z = zipfile.ZipFile(io.BytesIO(response.content))
             
             # GitHub zips have a top-level directory, so we extract without it
@@ -731,7 +731,7 @@ class GitHubManager:
                 parts = member.filename.split('/', 1)
                 if len(parts) > 1:
                     member.filename = parts[1]
-                    if member.filename:  # Skip if empty
+                    if member.filename:  
                         z.extract(member, path=destination)
             
             dest_abs = os.path.abspath(destination)
@@ -1018,4 +1018,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()
