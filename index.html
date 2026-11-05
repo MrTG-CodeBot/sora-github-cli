@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sora | GitHub on the Command Line</title>
+  <title>Sora CLI | Official GitHub Manager Documentation</title>
   <meta name="description" content="Sora is a fast, lightweight command-line tool for GitHub repository and file management across Windows, Linux, macOS, and Termux.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +21,7 @@
       --blue: #58a6ff;
       --green: #238636;
       --green-hover: #2ea043;
+      --purple: #bc8cff;
       --sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
@@ -31,27 +32,29 @@
     .header-inner { max-width: 1360px; margin: 0 auto; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
     .brand-link { display: flex; align-items: center; gap: 0.75rem; color: var(--fg); text-decoration: none; font-weight: 600; font-size: 1rem; }
     .brand-icon { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); object-fit: cover; }
-    .tag-version { font-size: 0.75rem; color: var(--fg-muted); border: 1px solid var(--border); padding: 0.1rem 0.45rem; border-radius: 12px; font-family: var(--mono); }
+    .tag-version { font-size: 0.72rem; color: var(--fg-muted); border: 1px solid var(--border); padding: 0.1rem 0.45rem; border-radius: 12px; font-family: var(--mono); }
     .header-nav { display: flex; align-items: center; gap: 1.25rem; }
-    .header-link { color: var(--fg-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.15s ease; }
+    .header-link { color: var(--fg-muted); text-decoration: none; font-size: 0.88rem; font-weight: 500; transition: color 0.15s ease; }
     .header-link:hover { color: var(--blue); }
     .btn-github { display: inline-flex; align-items: center; gap: 0.45rem; background: #21262d; border: 1px solid var(--border); color: var(--fg); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; }
     .btn-github:hover { background: #30363d; border-color: #8b949e; }
-    .hero { border-bottom: 1px solid var(--border); padding: 4rem 1.5rem 3rem; background: linear-gradient(180deg, var(--surface) 0%, var(--canvas) 100%); text-align: center; }
-    .hero-inner { max-width: 860px; margin: 0 auto; }
+    .hero { border-bottom: 1px solid var(--border); padding: 3.8rem 1.5rem 2.8rem; background: linear-gradient(180deg, var(--surface) 0%, var(--canvas) 100%); text-align: center; }
+    .hero-inner { max-width: 900px; margin: 0 auto; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; font-weight: 500; color: var(--blue); background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.25); padding: 0.2rem 0.7rem; border-radius: 20px; margin-bottom: 1.2rem; }
     .hero-title { font-size: 2.75rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 1rem; }
-    .hero-subtitle { font-size: 1.15rem; color: var(--fg-muted); line-height: 1.6; margin-bottom: 2rem; }
-    .hero-install { max-width: 580px; margin: 0 auto 1.8rem; background: var(--inset); border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem 1rem; display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 0.88rem; }
-    .hero-install span.prompt { color: var(--fg-subtle); user-select: none; margin-right: 0.5rem; }
-    .btn-copy { background: transparent; border: 1px solid var(--border); color: var(--fg-muted); padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: var(--sans); }
-    .btn-copy:hover { color: var(--fg); background: var(--border-subtle); }
-    .btn-copy.copied { color: #3fb950; border-color: var(--green); }
-    .hero-actions { display: flex; align-items: center; justify-content: center; gap: 0.85rem; }
+    .hero-subtitle { font-size: 1.15rem; color: var(--fg-muted); line-height: 1.6; margin-bottom: 1.8rem; }
+    .hero-actions { display: flex; align-items: center; justify-content: center; gap: 0.85rem; margin-bottom: 2rem; flex-wrap: wrap; }
     .btn-primary { background: var(--green); border: 1px solid rgba(240, 246, 252, 0.1); color: #fff; padding: 0.55rem 1.2rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; text-decoration: none; }
     .btn-primary:hover { background: var(--green-hover); }
     .btn-secondary { background: var(--surface); border: 1px solid var(--border); color: var(--fg); padding: 0.55rem 1.2rem; border-radius: 6px; font-size: 0.9rem; font-weight: 500; text-decoration: none; }
     .btn-secondary:hover { background: var(--border-subtle); border-color: #8b949e; }
-    .layout-container { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 250px 1fr; min-height: calc(100vh - 60px); }
+    .hero-playground { max-width: 760px; margin: 0 auto; text-align: left; background: var(--inset); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.4); }
+    .playground-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.45rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+    .playground-presets { display: flex; gap: 0.35rem; }
+    .preset-btn { background: transparent; border: 1px solid var(--border); color: var(--fg-muted); font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-family: var(--mono); }
+    .preset-btn.active, .preset-btn:hover { color: var(--fg); background: var(--border-subtle); border-color: #8b949e; }
+    .playground-body { padding: 1.1rem; font-family: var(--mono); font-size: 0.86rem; line-height: 1.6; min-height: 160px; }
+    .layout-container { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 60px); }
     aside.sidebar { border-right: 1px solid var(--border); padding: 1.5rem 1rem; position: sticky; top: 53px; height: calc(100vh - 53px); overflow-y: auto; }
     .sidebar-section { margin-bottom: 1.5rem; }
     .sidebar-heading { font-size: 0.72rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; color: var(--fg-subtle); margin-bottom: 0.5rem; padding-left: 0.5rem; }
@@ -59,8 +62,11 @@
     .sidebar-item a { display: block; padding: 0.3rem 0.5rem; color: var(--fg-muted); text-decoration: none; font-size: 0.86rem; border-radius: 6px; }
     .sidebar-item a:hover { color: var(--fg); background: var(--surface); }
     .sidebar-item a.active { color: var(--blue); background: rgba(56, 139, 253, 0.1); font-weight: 600; }
-    .search-field { width: 100%; background: var(--inset); border: 1px solid var(--border); border-radius: 6px; color: var(--fg); font-size: 0.82rem; padding: 0.4rem 0.6rem; outline: none; margin-bottom: 1rem; font-family: inherit; }
+    .search-box-wrap { position: relative; margin-bottom: 0.85rem; }
+    .search-field { width: 100%; background: var(--inset); border: 1px solid var(--border); border-radius: 6px; color: var(--fg); font-size: 0.82rem; padding: 0.45rem 1.8rem 0.45rem 0.65rem; outline: none; font-family: inherit; }
     .search-field:focus { border-color: var(--blue); }
+    .search-kbd { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 0.68rem; color: var(--fg-subtle); border: 1px solid var(--border); padding: 0.05rem 0.3rem; border-radius: 4px; font-family: var(--mono); }
+    .search-count { font-size: 0.72rem; color: var(--fg-subtle); padding-left: 0.5rem; margin-bottom: 1rem; }
     main.content { padding: 2.2rem 2.8rem 5rem; max-width: 1000px; }
     .doc-section { margin-bottom: 3.5rem; }
     .doc-section-title { font-size: 1.7rem; font-weight: 600; color: var(--fg); padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1.2rem; }
@@ -73,6 +79,9 @@
     .tab-content.active { display: block; }
     .terminal-block { background: var(--inset); border: 1px solid var(--border); border-radius: 6px; margin: 0.85rem 0 1.25rem; overflow: hidden; }
     .terminal-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.4rem 0.8rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--fg-subtle); font-family: var(--mono); }
+    .btn-copy { background: transparent; border: 1px solid var(--border); color: var(--fg-muted); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-family: var(--sans); }
+    .btn-copy:hover { color: var(--fg); background: var(--border-subtle); }
+    .btn-copy.copied { color: #3fb950; border-color: var(--green); }
     .terminal-code { padding: 0.9rem; font-family: var(--mono); font-size: 0.86rem; line-height: 1.55; color: var(--fg); overflow-x: auto; }
     .c-cmd { color: #79c0ff; }
     .c-arg { color: #a5d6ff; }
@@ -80,8 +89,14 @@
     .c-comment { color: #8b949e; }
     .c-success { color: #7ee787; }
     .cmd-item { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.5rem; overflow: hidden; }
-    .cmd-header { padding: 0.85rem 1.15rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .cmd-title { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--blue); }
+    .cmd-header { padding: 0.85rem 1.15rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    .cmd-title-wrap { display: flex; align-items: center; gap: 0.6rem; }
+    .cmd-badge { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; padding: 0.15rem 0.45rem; border-radius: 4px; font-family: var(--mono); }
+    .badge-get { background: rgba(56, 139, 253, 0.15); color: var(--blue); border: 1px solid rgba(56, 139, 253, 0.3); }
+    .badge-post { background: rgba(35, 134, 54, 0.15); color: #3fb950; border: 1px solid rgba(35, 134, 54, 0.3); }
+    .badge-put { background: rgba(188, 140, 255, 0.15); color: var(--purple); border: 1px solid rgba(188, 140, 255, 0.3); }
+    .badge-del { background: rgba(248, 81, 73, 0.15); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); }
+    .cmd-title { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--fg); }
     .cmd-synopsis { color: var(--fg-subtle); font-size: 0.8rem; font-family: var(--mono); }
     .cmd-body { padding: 1.15rem; }
     .cmd-body p { margin-bottom: 0.85rem; font-size: 0.9rem; }
@@ -107,7 +122,7 @@
 </head>
 <body>
 
-  <!-- Top Header -->
+  <!-- Header -->
   <header>
     <div class="header-inner">
       <a href="#" class="brand-link">
@@ -117,11 +132,11 @@
       </a>
       <div class="header-nav">
         <a href="#installation" class="header-link">Installation</a>
-        <a href="#authentication" class="header-link">Authentication</a>
-        <a href="#commands" class="header-link">Commands</a>
+        <a href="#authentication" class="header-link">Auth</a>
+        <a href="#commands" class="header-link">Manual</a>
         <a href="#workflows" class="header-link">Workflows</a>
         <a href="https://github.com/MrTG-CodeBot/sora-github-cli" target="_blank" class="btn-github">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
           </svg>
           <span>GitHub</span>
@@ -130,35 +145,50 @@
     </div>
   </header>
 
-  <!-- Hero Section -->
+  <!-- Hero -->
   <section class="hero">
     <div class="hero-inner">
+      <div class="hero-badge">⚡ v2.1.0 Released • Multi-Platform Config Engine</div>
       <h1 class="hero-title">GitHub on the Command Line.</h1>
       <p class="hero-subtitle">
         Sora brings repository management, recursive folder uploads, and remote code inspection to your terminal. Lightweight, dependency-free, and cross-platform across Windows, Linux, macOS, and Termux.
       </p>
 
-      <div class="hero-install">
-        <div>
-          <span class="prompt">$</span>
-          <code>curl -O https://raw.githubusercontent.com/MrTG-CodeBot/sora-github-cli/main/sora</code>
-        </div>
-        <button class="btn-copy" onclick="copySnippet(this, 'curl -O https://raw.githubusercontent.com/MrTG-CodeBot/sora-github-cli/main/sora')">Copy</button>
-      </div>
-
       <div class="hero-actions">
         <a href="#installation" class="btn-primary">Get Started</a>
-        <a href="#commands" class="btn-secondary">Command Manual</a>
+        <a href="#commands" class="btn-secondary">Command Reference</a>
+      </div>
+
+      <!-- Interactive Shell Playground -->
+      <div class="hero-playground">
+        <div class="playground-header">
+          <span style="font-family: var(--mono); font-size: 0.75rem; color: var(--fg-subtle);">Live Command Preview:</span>
+          <div class="playground-presets">
+            <button class="preset-btn active" onclick="loadPreview('account', this)">--check-account</button>
+            <button class="preset-btn" onclick="loadPreview('repos', this)">repos</button>
+            <button class="preset-btn" onclick="loadPreview('stats', this)">stats</button>
+            <button class="preset-btn" onclick="loadPreview('push', this)">push</button>
+          </div>
+        </div>
+        <div class="playground-body" id="previewArea">
+          <div><span style="color: var(--blue);">$</span> sora --check-account</div>
+          <div style="color: #7ee787;">✓ Connected as: MrTG-CodeBot</div>
+          <div style="color: var(--fg-subtle);">ℹ GitHub REST API: 200 OK • Rate limit: 4,992 / 5,000 remaining</div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Documentation Container -->
+  <!-- Container -->
   <div class="layout-container">
     
     <!-- Sidebar -->
     <aside class="sidebar">
-      <input type="text" id="sidebarSearch" class="search-field" placeholder="Filter commands..." onkeyup="filterDocs()">
+      <div class="search-box-wrap">
+        <input type="text" id="sidebarSearch" class="search-field" placeholder="Search commands..." onkeyup="filterDocs()">
+        <span class="search-kbd">/</span>
+      </div>
+      <div class="search-count" id="searchCount">Showing all 13 commands</div>
 
       <div class="sidebar-section">
         <div class="sidebar-heading">Getting Started</div>
@@ -214,7 +244,7 @@
       <!-- Installation Section -->
       <section id="installation" class="doc-section">
         <h2 class="doc-section-title">Installation</h2>
-        <p>Sora is packaged as a standalone Python script requiring Python 3.6+ and the <code>requests</code> package.</p>
+        <p>Sora is packaged as a standalone Python utility. It requires Python 3.6+ and the <code>requests</code> HTTP library.</p>
 
         <div class="tab-nav">
           <button class="tab-btn active" onclick="showTab('tab-win', this)">Windows</button>
@@ -224,10 +254,10 @@
         </div>
 
         <div id="tab-win" class="tab-content active">
-          <p>On Windows, Sora includes <code>sora.cmd</code> for native Command Prompt and PowerShell usage without typing <code>python</code>.</p>
+          <p>On Windows, Sora includes <code>sora.cmd</code> so you can run <code>sora</code> from Command Prompt and PowerShell without typing <code>python</code>.</p>
           <div class="terminal-block">
             <div class="terminal-header">
-              <span>Command Prompt / PowerShell</span>
+              <span>PowerShell / Command Prompt</span>
               <button class="btn-copy" onclick="copySnippet(this, 'git clone https://github.com/MrTG-CodeBot/sora-github-cli.git\ncd sora-github-cli\npip install requests')">Copy</button>
             </div>
             <pre class="terminal-code"><span class="c-comment"># 1. Clone repository</span>
@@ -292,7 +322,7 @@
         <div class="callout">
           <div class="callout-title">Required Token Scope</div>
           <div class="callout-body">
-            Generate a token with the <code>repo</code> scope selected at <a href="https://github.com/settings/tokens" target="_blank" style="color: var(--blue);">github.com/settings/tokens</a>.
+            Generate a token with the <code>repo</code> scope selected at <a href="https://github.com/settings/tokens" target="_blank" style="color: var(--blue);">github.com/settings/tokens</a>. This enables access to private repositories and code uploads.
           </div>
         </div>
 
@@ -301,7 +331,7 @@
             <span>Terminal</span>
             <button class="btn-copy" onclick="copySnippet(this, 'sora --set-token YOUR_TOKEN\nsora --check-account')">Copy</button>
           </div>
-          <pre class="terminal-code"><span class="c-comment"># Save token to ~/.sora/config.json</span>
+          <pre class="terminal-code"><span class="c-comment"># Save token permanently to ~/.sora/config.json</span>
 <span class="c-cmd">sora</span> <span class="c-flag">--set-token</span> <span class="c-arg">ghp_yourTokenHere</span>
 <span class="c-success">✓ Token saved to configuration: ~/.sora/config.json</span>
 
@@ -309,6 +339,8 @@
 <span class="c-cmd">sora</span> <span class="c-flag">--check-account</span>
 <span class="c-success">✓ Connected as: MrTG-CodeBot</span></pre>
         </div>
+
+        <p><strong>Credential Resolution:</strong> Sora checks credentials in order: <code>--token &lt;ARG&gt;</code> &gt; <code>~/.sora/config.json</code> &gt; <code>$GITHUB_TOKEN</code>.</p>
       </section>
 
       <!-- Command Manual -->
@@ -318,7 +350,10 @@
         <!-- repos -->
         <article id="cmd-repos" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora repos</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-get">GET</span>
+              <span class="cmd-title">sora repos</span>
+            </div>
             <span class="cmd-synopsis">sora repos [--visibility {all,public,private}] [--sort {created,updated,pushed}] [--limit INT]</span>
           </div>
           <div class="cmd-body">
@@ -340,7 +375,10 @@
         <!-- create -->
         <article id="cmd-create" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora create</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-post">POST</span>
+              <span class="cmd-title">sora create</span>
+            </div>
             <span class="cmd-synopsis">sora create &lt;name&gt; [--private] [--desc TEXT]</span>
           </div>
           <div class="cmd-body">
@@ -362,7 +400,10 @@
         <!-- stats -->
         <article id="cmd-stats" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora stats</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-get">GET</span>
+              <span class="cmd-title">sora stats</span>
+            </div>
             <span class="cmd-synopsis">sora stats &lt;repo&gt; (alias: info)</span>
           </div>
           <div class="cmd-body">
@@ -376,7 +417,10 @@
         <!-- view -->
         <article id="cmd-view" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora view</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-get">GET</span>
+              <span class="cmd-title">sora view</span>
+            </div>
             <span class="cmd-synopsis">sora view &lt;repo&gt;</span>
           </div>
           <div class="cmd-body">
@@ -390,7 +434,10 @@
         <!-- push -->
         <article id="cmd-push" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora push</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-put">PUT</span>
+              <span class="cmd-title">sora push</span>
+            </div>
             <span class="cmd-synopsis">sora push &lt;repo&gt; [path] [--target REMOTE_DIR] [-m MESSAGE]</span>
           </div>
           <div class="cmd-body">
@@ -413,7 +460,10 @@
         <!-- pull -->
         <article id="cmd-pull" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora pull</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-get">GET</span>
+              <span class="cmd-title">sora pull</span>
+            </div>
             <span class="cmd-synopsis">sora pull &lt;repo&gt; [--dest PATH] [--branch NAME] (aliases: download, clone)</span>
           </div>
           <div class="cmd-body">
@@ -434,7 +484,10 @@
         <!-- ls -->
         <article id="cmd-ls" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora ls</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-get">GET</span>
+              <span class="cmd-title">sora ls</span>
+            </div>
             <span class="cmd-synopsis">sora ls &lt;repo&gt; [--path PATH] [--files-only] [--folders-only]</span>
           </div>
           <div class="cmd-body">
@@ -448,7 +501,10 @@
         <!-- cat -->
         <article id="cmd-cat" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora cat</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-get">GET</span>
+              <span class="cmd-title">sora cat</span>
+            </div>
             <span class="cmd-synopsis">sora cat &lt;repo&gt; &lt;file&gt; [--raw] (alias: read)</span>
           </div>
           <div class="cmd-body">
@@ -462,7 +518,10 @@
         <!-- branches -->
         <article id="cmd-branches" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora branches</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-get">GET</span>
+              <span class="cmd-title">sora branches</span>
+            </div>
             <span class="cmd-synopsis">sora branches &lt;repo&gt;</span>
           </div>
           <div class="cmd-body">
@@ -476,7 +535,10 @@
         <!-- rename -->
         <article id="cmd-rename" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora rename</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-put">PUT</span>
+              <span class="cmd-title">sora rename</span>
+            </div>
             <span class="cmd-synopsis">sora rename &lt;old_name&gt; &lt;new_name&gt; (alias: mv)</span>
           </div>
           <div class="cmd-body">
@@ -490,7 +552,10 @@
         <!-- update -->
         <article id="cmd-update" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora update</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-put">PUT</span>
+              <span class="cmd-title">sora update</span>
+            </div>
             <span class="cmd-synopsis">sora update &lt;name&gt; [--desc TEXT] [--public | --private] [--homepage URL]</span>
           </div>
           <div class="cmd-body">
@@ -504,7 +569,10 @@
         <!-- rm -->
         <article id="cmd-rm" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora rm</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-del">DEL</span>
+              <span class="cmd-title">sora rm</span>
+            </div>
             <span class="cmd-synopsis">sora rm &lt;repo&gt; &lt;path&gt; [-m MESSAGE] [--force] (aliases: remove, del)</span>
           </div>
           <div class="cmd-body">
@@ -518,7 +586,10 @@
         <!-- delete -->
         <article id="cmd-delete" class="cmd-item">
           <div class="cmd-header">
-            <span class="cmd-title">sora delete</span>
+            <div class="cmd-title-wrap">
+              <span class="cmd-badge badge-del">DEL</span>
+              <span class="cmd-title">sora delete</span>
+            </div>
             <span class="cmd-synopsis">sora delete &lt;name&gt; [--force]</span>
           </div>
           <div class="cmd-body">
@@ -562,6 +633,9 @@
         <div class="terminal-block">
           <pre class="terminal-code"><span class="c-cmd">ipconfig</span> /flushdns</pre>
         </div>
+
+        <h3>File Upload Payload Limit (64 KB)</h3>
+        <p>GitHub Contents API enforces a 64 KB JSON request payload limit per file. For files larger than 45 KB uncompressed, minify assets or push via Git.</p>
       </section>
 
     </main>
@@ -582,6 +656,36 @@
   </footer>
 
   <script>
+    const previewData = {
+      account: `<div><span style="color: var(--blue);">$</span> sora --check-account</div>
+<div style="color: #7ee787;">✓ Connected as: MrTG-CodeBot</div>
+<div style="color: var(--fg-subtle);">ℹ GitHub REST API: 200 OK • Rate limit: 4,992 / 5,000 remaining</div>`,
+
+      repos: `<div><span style="color: var(--blue);">$</span> sora repos --limit 3</div>
+<div style="color: var(--fg-subtle);">ℹ Fetching repositories for MrTG-CodeBot...</div>
+<div>📦 <span style="color: #fff;">MrTG-CodeBot/sora-github-cli</span> <span style="color: var(--fg-subtle);">[public]</span> ⭐ 12 • Python</div>
+<div>📦 <span style="color: #fff;">MrTG-CodeBot/Muzic-x</span> <span style="color: var(--purple);">[private]</span> ⭐ 0 • Dart</div>
+<div>📦 <span style="color: #fff;">MrTG-CodeBot/telegram-bot</span> <span style="color: var(--fg-subtle);">[public]</span> ⭐ 34 • Python</div>`,
+
+      stats: `<div><span style="color: var(--blue);">$</span> sora stats Muzic-x</div>
+<div style="color: var(--fg-subtle);">ℹ Fetching statistics for 'MrTG-CodeBot/Muzic-x'...</div>
+<div>📊 <span style="color: #fff;">Statistics for MrTG-CodeBot/Muzic-x</span></div>
+<div>  Visibility: <span style="color: var(--purple);">🔒 Private</span> • Size: 9.61 MB • Dart</div>
+<div>  Engagement: ⭐ 0 Stars • 🔱 0 Forks • ⚠ 0 Open Issues</div>`,
+
+      push: `<div><span style="color: var(--blue);">$</span> sora push my-repo ./dist --target build/ -m "Deploy v2.1"</div>
+<div style="color: var(--fg-subtle);">ℹ Scanning ./dist (5 files found)...</div>
+<div>  ↑ Uploading build/index.html ... <span style="color: #7ee787;">done</span></div>
+<div>  ↑ Uploading build/bundle.js ... <span style="color: #7ee787;">done</span></div>
+<div style="color: #7ee787;">✓ Successfully uploaded 5 files to my-repo</div>`
+    };
+
+    function loadPreview(key, btn) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('previewArea').innerHTML = previewData[key] || '';
+    }
+
     function copySnippet(btn, text) {
       navigator.clipboard.writeText(text).then(() => {
         const orig = btn.innerText;
@@ -601,13 +705,25 @@
 
     function filterDocs() {
       const q = document.getElementById('sidebarSearch').value.toLowerCase().trim();
-      document.querySelectorAll('.cmd-item').forEach(el => {
-        el.style.display = (!q || el.innerText.toLowerCase().includes(q)) ? 'block' : 'none';
+      const items = document.querySelectorAll('.cmd-item');
+      let visible = 0;
+      items.forEach(el => {
+        const match = !q || el.innerText.toLowerCase().includes(q);
+        el.style.display = match ? 'block' : 'none';
+        if (match) visible++;
       });
       document.querySelectorAll('.sidebar-item').forEach(el => {
         el.style.display = (!q || el.innerText.toLowerCase().includes(q)) ? 'block' : 'none';
       });
+      document.getElementById('searchCount').innerText = q ? `Showing ${visible} of ${items.length} commands` : `Showing all ${items.length} commands`;
     }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement !== document.getElementById('sidebarSearch')) {
+        e.preventDefault();
+        document.getElementById('sidebarSearch').focus();
+      }
+    });
 
     const sections = document.querySelectorAll('.doc-section, .cmd-item');
     const navAnchors = document.querySelectorAll('.nav-anchor');
