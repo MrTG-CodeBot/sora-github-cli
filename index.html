@@ -988,4 +988,101 @@
                                 <tr>
                                     <td><code>[path]</code></td>
                                     <td>positional</td>
-                         
+                                    <td>Local file or directory path (default: current directory <code>.</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--target</code></td>
+                                    <td>string</td>
+                                    <td>Destination folder inside the remote repository</td>
+                                </tr>
+                                <tr>
+                                    <td><code>-m, --message</code></td>
+                                    <td>string</td>
+                                    <td>Git commit message</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="terminal-block">
+                            <div class="terminal-header">
+                                <span>Example</span>
+                                <button class="btn-copy" onclick="copySnippet(this, 'sora push my-repo ./dist --target build/ -m &quot;Deploy v2.1.0 assets&quot;')">Copy</button>
+                            </div>
+                            <pre class="terminal-code"><span class="c-cmd">sora</span> push my-repo ./dist <span class="c-flag">--target</span> <span class="c-arg">build/</span> <span class="c-flag">-m</span> <span class="c-arg">"Deploy v2.1.0 assets"</span></pre>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- cmd-pull -->
+                <article id="cmd-pull" class="cmd-item">
+                    <div class="cmd-header">
+                        <span class="cmd-title">sora pull</span>
+                        <span class="cmd-synopsis">sora pull &lt;repo&gt; [--dest PATH] [--branch NAME] (aliases: download, clone)</span>
+                    </div>
+                    <div class="cmd-body">
+                        <p>Downloads a repository archive directly through the GitHub API and unpacks it to a target directory without requiring a git client.</p>
+                        
+                        <table class="options-table">
+                            <thead>
+                                <tr>
+                                    <th>Flag</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>--dest</code></td>
+                                    <td>string</td>
+                                    <td>Destination directory (default: <code>./&lt;repo&gt;</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--branch</code></td>
+                                    <td>string</td>
+                                    <td>Specific branch to download (default: repository default)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="terminal-block">
+                            <div class="terminal-header">
+                                <span>Example</span>
+                                <button class="btn-copy" onclick="copySnippet(this, 'sora pull my-app --dest ./backup-project --branch main')">Copy</button>
+                            </div>
+                            <pre class="terminal-code"><span class="c-cmd">sora</span> pull my-app <span class="c-flag">--dest</span> <span class="c-arg">./backup-project</span> <span class="c-flag">--branch</span> <span class="c-arg">main</span></pre>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- cmd-ls -->
+                <article id="cmd-ls" class="cmd-item">
+                    <div class="cmd-header">
+                        <span class="cmd-title">sora ls</span>
+                        <span class="cmd-synopsis">sora ls &lt;repo&gt; [--path PATH] [--files-only] [--folders-only] [--limit INT]</span>
+                    </div>
+                    <div class="cmd-body">
+                        <p>Lists files and directories inside a remote repository without cloning.</p>
+                        
+                        <div class="terminal-block">
+                            <div class="terminal-header">
+                                <span>Example</span>
+                                <button class="btn-copy" onclick="copySnippet(this, 'sora ls my-repo --path src/components')">Copy</button>
+                            </div>
+                            <pre class="terminal-code"><span class="c-cmd">sora</span> ls my-repo <span class="c-flag">--path</span> <span class="c-arg">src/components</span></pre>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- cmd-cat -->
+                <article id="cmd-cat" class="cmd-item">
+                    <div class="cmd-header">
+                        <span class="cmd-title">sora cat</span>
+                        <span class="cmd-synopsis">sora cat &lt;repo&gt; &lt;file&gt; [--raw] (alias: read)</span>
+                    </div>
+                    <div class="cmd-body">
+                        <p>Reads and prints the content of a remote file directly into stdout.</p>
+                        
+                        <div class="terminal-block">
+                            <div class="terminal-header">
+                                <span>Example</span>
+                           
