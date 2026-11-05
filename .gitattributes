@@ -1,0 +1,7 @@
+# Enforce LF endings on shell scripts and Unix executables
+sora text eol=lf
+*.sh text eol=lf
+
+# Enforce CRLF on Windows batch files
+*.cmd text eol=crlf
+*.bat text eol=crlf
