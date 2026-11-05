@@ -109,15 +109,22 @@ curl -O https://raw.githubusercontent.com/MrTG-CodeBot/sora-github-cli/main/sora
 chmod +x sora
 ```
 
-### Step 3: Add to PATH (Optional)
+### Step 3: Add to PATH (Run Sora Globally)
 
-**Linux/macOS:**
+**Linux / macOS:**
 ```bash
+chmod +x sora
 sudo mv sora /usr/local/bin/
 ```
 
+**Android (Termux):**
+```bash
+chmod +x sora
+cp sora $PREFIX/bin/
+```
+
 **Windows:**
-Add the script directory to your PATH environment variable.
+Run `sora.cmd` or add the script directory to your User `PATH`.
 
 ### Step 4: Install Dependencies
 
@@ -138,22 +145,12 @@ pip install requests
 5. Click "Generate token"
 6. **Copy the token** (you won't see it again!)
 
-### 2. Save Your Token (Windows)
+### 2. Save Your Token (All Platforms)
+
+Works automatically on **Windows**, **Linux**, **macOS**, and **Termux (Android)** without restarting your terminal:
 
 ```bash
 sora --set-token YOUR_GITHUB_TOKEN
-```
-
-Or set it as an environment variable:
-
-**Windows (PowerShell):**
-```powershell
-$env:GITHUB_TOKEN="your_token_here"
-```
-
-**Linux/macOS:**
-```bash
-export GITHUB_TOKEN="your_token_here"
 ```
 
 ### 3. Verify Authentication

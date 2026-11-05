@@ -7,6 +7,7 @@ import requests
 import zipfile
 import io
 import time
+import json
 from typing import Optional, Tuple, List, Dict
 
 __version__ = "2.1.0"
@@ -743,31 +744,101 @@ class GitHubManager:
             print_error("Failed to extract: Invalid ZIP file")
 
 
-def setup_token(token: str, scope: str = "user"):
-    """Set GitHub token as environment variable (Windows only)"""
+def get_config_dir() -> str:
+    """Get cross-platform config directory (~/.sora)"""
+    home = os.path.expanduser("~")
+    config_dir = os.path.join(home, ".sora")
+    return config_dir
+
+
+def get_config_file() -> str:
+    """Get cross-platform config file path (~/.sora/config.json)"""
+    return os.path.join(get_config_dir(), "config.json")
+
+
+def load_config() -> dict:
+    """Load configuration from file"""
+    config_file = get_config_file()
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def save_config(data: dict):
+    """Save configuration to file with safe permissions"""
+    config_dir = get_config_dir()
+    os.makedirs(config_dir, exist_ok=True)
+    config_file = get_config_file()
+    with open(config_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
     try:
-        import winreg
+        os.chmod(config_file, 0o600)
+    except Exception:
+        pass
+
+
+def get_stored_token(args) -> Optional[str]:
+    """Retrieve token from CLI args, config file, or environment"""
+    # 1. CLI argument: --token
+    if getattr(args, "token", None):
+        return args.token
+    
+    # 2. Config file (~/.sora/config.json)
+    config = load_config()
+    stored_token = config.get("token")
+    if stored_token:
+        return stored_token
         
-        if scope == "system":
-            key = winreg.CreateKey(
-                winreg.HKEY_LOCAL_MACHINE,
-                r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
-            )
-            print_warning("System-level requires admin privileges and system restart")
-        else:
-            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, 'Environment')
+    # 3. Environment variable (GITHUB_TOKEN)
+    env_token = os.environ.get("GITHUB_TOKEN")
+    if env_token:
+        return env_token
         
-        winreg.SetValueEx(key, "GITHUB_TOKEN", 0, winreg.REG_SZ, token)
-        winreg.CloseKey(key)
-        
-        print_success(f"Token saved to {scope} environment")
-        print_info("Restart your terminal to apply changes")
-        
-    except ImportError:
-        print_error("This feature is Windows-only")
-        print_info("Set GITHUB_TOKEN manually in your system environment")
+    return None
+
+
+def setup_token(token: str, scope: str = "user"):
+    """Set GitHub token across all platforms (Windows, Linux, macOS, Termux, etc.)"""
+    clean_token = token.strip()
+    
+    # 1. Save to ~/.sora/config.json (Works everywhere without terminal restart)
+    try:
+        config = load_config()
+        config["token"] = clean_token
+        save_config(config)
+        print_success(f"Token saved to configuration: {get_config_file()}")
     except Exception as e:
-        print_error(f"Failed to set token: {e}")
+        print_error(f"Failed to save configuration file: {e}")
+
+    # 2. Platform-specific integrations
+    if sys.platform.startswith("win"):
+        try:
+            import winreg
+            if scope == "system":
+                key = winreg.CreateKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+                )
+                print_warning("System-level requires admin privileges and system restart")
+            else:
+                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, 'Environment')
+            
+            winreg.SetValueEx(key, "GITHUB_TOKEN", 0, winreg.REG_SZ, clean_token)
+            winreg.CloseKey(key)
+            print_success(f"Token also saved to Windows {scope} environment")
+        except Exception:
+            pass
+    else:
+        # Detect Termux or Unix
+        is_termux = "TERMUX_VERSION" in os.environ or "com.termux" in os.environ.get("PREFIX", "")
+        platform_name = "Termux (Android)" if is_termux else ("macOS" if sys.platform == "darwin" else "Linux")
+        print_success(f"Token configured for {platform_name}")
+
+    print_info("Ready to use immediately across all terminals!")
 
 
 def show_examples():
@@ -931,10 +1002,11 @@ def main():
         return
     
     # Get token
-    token = args.token or os.environ.get("GITHUB_TOKEN")
+    token = get_stored_token(args)
     if not token:
         print_error("GitHub token required!")
-        print_info("Use: sora --token YOUR_TOKEN")
+        print_info("Use: sora --set-token YOUR_TOKEN")
+        print_info("Or: sora --token YOUR_TOKEN")
         print_info("Or set GITHUB_TOKEN environment variable")
         print_info("Create token at: https://github.com/settings/tokens")
         sys.exit(1)
