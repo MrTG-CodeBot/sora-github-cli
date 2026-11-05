@@ -1085,4 +1085,56 @@
                         <div class="terminal-block">
                             <div class="terminal-header">
                                 <span>Example</span>
-                           
+                                <button class="btn-copy" onclick="copySnippet(this, 'sora cat my-repo config.json')">Copy</button>
+                            </div>
+                            <pre class="terminal-code"><span class="c-cmd">sora</span> cat my-repo config.json</pre>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- cmd-branches -->
+                <article id="cmd-branches" class="cmd-item">
+                    <div class="cmd-header">
+                        <span class="cmd-title">sora branches</span>
+                        <span class="cmd-synopsis">sora branches &lt;repo&gt;</span>
+                    </div>
+                    <div class="cmd-body">
+                        <p>Lists all branches in the specified repository with their latest commit SHA.</p>
+                        
+                        <div class="terminal-block">
+                            <div class="terminal-header">
+                                <span>Example</span>
+                                <button class="btn-copy" onclick="copySnippet(this, 'sora branches my-repo')">Copy</button>
+                            </div>
+                            <pre class="terminal-code"><span class="c-cmd">sora</span> branches my-repo</pre>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- cmd-rename -->
+                <article id="cmd-rename" class="cmd-item">
+                    <div class="cmd-header">
+                        <span class="cmd-title">sora rename</span>
+                        <span class="cmd-synopsis">sora rename &lt;old_name&gt; &lt;new_name&gt; (alias: mv)</span>
+                    </div>
+                    <div class="cmd-body">
+                        <p>Renames a GitHub repository.</p>
+                        
+                        <div class="terminal-block">
+                            <div class="terminal-header">
+                                <span>Example</span>
+                                <button class="btn-copy" onclick="copySnippet(this, 'sora rename legacy-bot modern-bot')">Copy</button>
+                            </div>
+                            <pre class="terminal-code"><span class="c-cmd">sora</span> rename legacy-bot modern-bot</pre>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- cmd-update -->
+                <article id="cmd-update" class="cmd-item">
+                    <div class="cmd-header">
+                        <span class="cmd-title">sora update</span>
+                        <span class="cmd-synopsis">sora update &lt;name&gt; [--desc TEXT] [--public | --private] [--homepage URL]</span>
+                    </div>
+                    <div class="cmd-body">
+                        <p>Updates rep
